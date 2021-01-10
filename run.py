@@ -3,15 +3,37 @@
 import os
 import logging
 import threading
+import argparse
 from detector.reserver import ReserverThread
 from detector.detector import Detector
 from detector.camera import Camera
 from configparser import ConfigParser
 
 def main():
-    logging.basicConfig( level=logging.DEBUG )
+    
+    parser = argparse.ArgumentParser()
+
+    verbosity_grp = parser.add_mutually_exclusive_group()
+
+    verbosity_grp.add_argument( '-v', '--verbose', action='store_true' )
+
+    verbosity_grp.add_argument( '-q', '--quiet', action='store_true' )
+
+    parser.add_argument( '-c', '--config', action='store' )
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig( level=logging.DEBUG )
+    elif args.quiet:
+        logging.basicConfig( level=logging.ERROR )
+    else:
+        logging.basicConfig( level=logging.INFO )
+
+    logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
+
     config = ConfigParser()
-    config.read( 'detector.ini' )
+    config.read( args.config )
 
     # Setup the camera and reserver satellite threads.
 

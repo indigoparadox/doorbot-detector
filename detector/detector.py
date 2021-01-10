@@ -3,6 +3,7 @@ import cv2
 import numpy
 import logging
 import time
+from datetime import datetime
 from threading import Thread
 
 class Detector( Thread ):
@@ -17,12 +18,17 @@ class Detector( Thread ):
 
         logger.debug( 'setting up detector...' )
 
+        self.snapshots = kwargs['snapshots'] if 'snapshots' in kwargs else '/tmp'
         self.running = True
         self.blur = int( kwargs['blur'] ) if 'blur' in kwargs else 5
         self.threshold = \
             int( kwargs['threshold'] ) if 'threshold' in kwargs else 127
 
-        # TODO: Create a mechanism to rinit this for day/night?
+        logger.info( 'saving snapshots to {}'.format( self.snapshots ) )
+
+        logger.debug( 'threshold: {}'.format( self.threshold ) )
+        logger.debug( 'blur: {}'.format( self.blur ) )
+
         self.back_sub = cv2.createBackgroundSubtractorMOG2(
             history=150,
             varThreshold=int( kwargs['varthreshold'] ) \
@@ -71,9 +77,18 @@ class Detector( Thread ):
 
                 cnt_iter = contours[max_idx]
                 x, y, w, h = cv2.boundingRect( cnt_iter )
-                # TODO: Vary color based on type of object.
-                color = (255, 0, 0)
-                cv2.rectangle( frame, (x, y), (x + w, y + h), color, 3 )
+
+                if 20 < w and 20 < h:
+                    # TODO: Vary color based on type of object.
+                    logging.info( 'movement: {}w by {}h'.format( w, h ) )
+
+                    timestamp = datetime.now().strftime(
+                        '%Y-%m-%d-%H-%M-%S-%f' )
+                    cv2.imwrite( '{}/{}.jpg'.format(
+                        self.snapshots, timestamp ), frame )
+
+                    color = (255, 0, 0)
+                    cv2.rectangle( frame, (x, y), (x + w, y + h), color, 3 )
 
             logger.debug( 'setting frame...' )
             if self.reserver:
