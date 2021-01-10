@@ -1,0 +1,6 @@
+[stream]
+url=
+varthreshold=25
+
+[reserver]
+enable=true
