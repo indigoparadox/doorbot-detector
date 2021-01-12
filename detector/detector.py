@@ -24,7 +24,7 @@ class Detector( Thread ):
         self.min_w = int( kwargs['minw'] ) if 'minw' in kwargs else 0
         self.min_h = int( kwargs['minh'] ) if 'minh' in kwargs else 0
         self.ignore_edges = True if 'ignoreedges' in kwargs and \
-            'true' == kwargs['ignoreedges'] else false
+            'true' == kwargs['ignoreedges'] else False
         logger.info( 'minimum movement size: {}x{}, ignore edges: {}'.format(
             self.min_w, self.min_h, self.ignore_edges ) )
         self.wait_max = int( kwargs['waitmax'] ) \
