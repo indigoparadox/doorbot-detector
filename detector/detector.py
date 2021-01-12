@@ -18,6 +18,8 @@ class Detector( Thread ):
 
         logger.debug( 'setting up detector...' )
 
+        self.notifiers = kwargs['notifiers']
+
         self.snapshots = kwargs['snapshots'] if 'snapshots' in kwargs else '/tmp'
         self.wait_max = int( kwargs['waitmax'] ) \
             if 'waitmax' in kwargs else 5
@@ -89,6 +91,10 @@ class Detector( Thread ):
                 if 20 < w and 20 < h:
                     # TODO: Vary color based on type of object.
                     logging.info( 'movement: {}w by {}h'.format( w, h ) )
+                    for notifier in self.notifiers:
+                        # TODO: Send image data.
+                        notifier.send( 'movement', '{}x{} at {}, {}'.format(
+                            w, h, x, y ) )
 
                     timestamp = datetime.now().strftime(
                         '%Y-%m-%d-%H-%M-%S-%f' )

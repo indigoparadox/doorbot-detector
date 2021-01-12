@@ -4,6 +4,7 @@ import os
 import logging
 import threading
 import argparse
+from detector.notifier import MQTTNotifier
 from detector.reserver import ReserverThread
 from detector.detector import Detector
 from detector.camera import Camera
@@ -44,11 +45,26 @@ def main():
     reserver_thread = ReserverThread( **reserver_cfg )
     reserver_thread.start()
 
+    # Setup the notifier.
+
+    notifiers = []
+
+    mqtt = {}
+    try:
+        mqtt_cfg = dict( config.items( 'mqtt' ) )
+    except Exception as e:
+        logging.error( e )
+
+    if 'enable' in mqtt_cfg and 'true' == mqtt_cfg['enable']:
+        mqtt = MQTTNotifier( **mqtt_cfg )
+        notifiers.append( mqtt )
+
     # Setup the detector, the star of the show.
 
     detector_cfg = dict( config.items( 'stream' ) )
     detector_cfg['reserver'] = reserver_thread.server
     detector_cfg['camera'] = cam
+    detector_cfg['notifiers'] = notifiers
     app = Detector( **detector_cfg )
     app.start()
     app.join()
