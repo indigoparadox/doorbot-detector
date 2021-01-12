@@ -60,7 +60,7 @@ class ReserverThread( Thread ):
     def __init__( self, **kwargs ):
         super().__init__()
         self.daemon = True
-        hostname = kwargs['hostname'] if 'hostname' in kwargs else '0.0.0.0'
+        hostname = kwargs['listen'] if 'listen' in kwargs else '0.0.0.0'
         port = int( kwargs['port'] ) if 'port' in kwargs else 8888
         self.server = Reserver( (hostname, port), ReserverHandler )
 

@@ -19,6 +19,8 @@ class Detector( Thread ):
         logger.debug( 'setting up detector...' )
 
         self.snapshots = kwargs['snapshots'] if 'snapshots' in kwargs else '/tmp'
+        self.wait_max = int( kwargs['waitmax'] ) \
+            if 'waitmax' in kwargs else 5
         self.running = True
         self.blur = int( kwargs['blur'] ) if 'blur' in kwargs else 5
         self.threshold = \
@@ -45,6 +47,8 @@ class Detector( Thread ):
     
     def run( self ):
 
+        wait_count = 0
+
         logger = logging.getLogger( 'detector.run' )
 
         logger.debug( 'starting detector loop...' )
@@ -54,6 +58,10 @@ class Detector( Thread ):
             if not res:
                 logger.warning( 'waiting...' )
                 time.sleep( 1 )
+                wait_count += 1
+                if self.wait_max <= wait_count:
+                    # Let systemd restart us.
+                    raise Exception( 'waiting too long for camera!' )
                 continue
 
             logger.debug( 'processing frame...' )
