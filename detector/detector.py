@@ -21,6 +21,12 @@ class Detector( Thread ):
         self.notifiers = kwargs['notifiers']
 
         self.snapshots = kwargs['snapshots'] if 'snapshots' in kwargs else '/tmp'
+        self.min_w = int( kwargs['minw'] ) if 'minw' in kwargs else 0
+        self.min_h = int( kwargs['minh'] ) if 'minh' in kwargs else 0
+        self.ignore_edges = True if 'ignoreedges' in kwargs and \
+            'true' == kwargs['ignoreedges'] else false
+        logger.info( 'minimum movement size: {}x{}, ignore edges: {}'.format(
+            self.min_w, self.min_h, self.ignore_edges ) )
         self.wait_max = int( kwargs['waitmax'] ) \
             if 'waitmax' in kwargs else 5
         self.running = True
@@ -52,6 +58,7 @@ class Detector( Thread ):
         wait_count = 0
 
         logger = logging.getLogger( 'detector.run' )
+        logger_movement = logging.getLogger( 'detector.run.movement' )
 
         logger.debug( 'starting detector loop...' )
 
@@ -88,9 +95,24 @@ class Detector( Thread ):
                 cnt_iter = contours[max_idx]
                 x, y, w, h = cv2.boundingRect( cnt_iter )
 
-                if 20 < w and 20 < h:
+                if self.min_w > w or self.min_h > h:
+                    logger_movement.debug(
+                        'ignored smaller than min: {}x{} at {}, {}'.format(
+                        w, h, x, y ) )
+                elif self.ignore_edges and \
+                0 == w or \
+                0 == h or \
+                x + w >= self.cam.w or \
+                y + h >= self.cam.h:
+                    logger_movement.debug(
+                        'ignored on edge: {}x{} at {}, {}'.format(
+                        w, h, x, y ) )
+                else:
                     # TODO: Vary color based on type of object.
-                    logging.info( 'movement: {}w by {}h'.format( w, h ) )
+                    # TODO: Send notifier w/ summary of current objects.
+                    # TODO: Make this summary retained.
+                    logger_movement.info( 'movement: {}x{} at {}, {}'.format(
+                        w, h, x, y ) )
                     for notifier in self.notifiers:
                         # TODO: Send image data.
                         notifier.send( 'movement', '{}x{} at {}, {}'.format(

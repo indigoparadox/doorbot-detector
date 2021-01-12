@@ -15,12 +15,14 @@ class Camera( Thread ):
 
         logger.debug( 'setting up camera...' )
 
+        self.w = 0
+        self.h = 0
         self.daemon = True
         self.running = True
         self._ret = False
         self._frame = None
         self._stream = cv2.VideoCapture( url )
-        
+
     def run( self ):
         
         logger = logging.getLogger( 'camera.run' )
@@ -28,6 +30,15 @@ class Camera( Thread ):
         logger.debug( 'starting camera loop...' )
 
         while self.running:
+            if self._stream.isOpened() and 0 >= self.w:
+                self.w = \
+                    int( self._stream.get( cv2.CAP_PROP_FRAME_WIDTH ) )
+                logger.debug( 'video is {} wide'.format( self.w ) )
+            if self._stream.isOpened() and 0 >= self.h:
+                self.h = \
+                    int( self._stream.get( cv2.CAP_PROP_FRAME_HEIGHT ) )
+                logger.debug( 'video is {} high'.format( self.h ) )
+
             # No lock needed here because this thread will be the only one
             # to set this frame.
             self._ret, self._frame = self._stream.read()

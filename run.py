@@ -26,12 +26,14 @@ def main():
 
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
+        logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
+        logging.getLogger( 'detector.run.movement' ).setLevel( logging.DEBUG )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
     else:
         logging.basicConfig( level=logging.INFO )
-
-    logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
+        logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
+        logging.getLogger( 'detector.run.movement' ).setLevel( logging.DEBUG )
 
     config = ConfigParser()
     config.read( args.config )
