@@ -5,6 +5,16 @@ class Notifier( object ):
     def send( self, subject, message ):
         pass
 
+class LoggerNotifier( Notifier ):
+    def __init__( self, **kwargs ):
+        self.logger = logging.getLogger( 'detector.run.movement' )
+
+    def send( self, subject, message ):
+        if 'ignored' == subject:
+            self.logger.debug( '{}: {}'.format( subject, message ) )
+        else:
+            self.logger.info( '{}: {}'.format( subject, message ) )
+
 class MQTTNotifier( Notifier ):
     def __init__( self, **kwargs ):
 

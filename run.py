@@ -4,7 +4,7 @@ import os
 import logging
 import threading
 import argparse
-from detector.notifier import MQTTNotifier
+from detector.notifier import MQTTNotifier, LoggerNotifier
 from detector.reserver import ReserverThread
 from detector.detector import Detector
 from detector.camera import Camera
@@ -50,6 +50,8 @@ def main():
     # Setup the notifier.
 
     notifiers = []
+
+    notifiers.append( LoggerNotifier() )
 
     mqtt = {}
     try:

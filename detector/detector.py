@@ -52,13 +52,16 @@ class Detector( Thread ):
         self.reserver = None
         if 'reserver' in kwargs and kwargs['reserver']:
             self.reserver = kwargs['reserver']
+
+    def _notify( self, subject, message ):
+        for notifier in self.notifiers:
+            notifier.send( subject, message )
     
     def run( self ):
 
         wait_count = 0
 
         logger = logging.getLogger( 'detector.run' )
-        logger_movement = logging.getLogger( 'detector.run.movement' )
 
         logger.debug( 'starting detector loop...' )
 
@@ -96,27 +99,22 @@ class Detector( Thread ):
                 x, y, w, h = cv2.boundingRect( cnt_iter )
 
                 if self.min_w > w or self.min_h > h:
-                    logger_movement.debug(
-                        'ignored smaller than min: {}x{} at {}, {}'.format(
+                    self._notify( 'ignored', 'small {}x{} at {}, {}'.format(
                         w, h, x, y ) )
                 elif self.ignore_edges and \
-                0 == w or \
+                (0 == w or \
                 0 == h or \
                 x + w >= self.cam.w or \
-                y + h >= self.cam.h:
-                    logger_movement.debug(
-                        'ignored on edge: {}x{} at {}, {}'.format(
+                y + h >= self.cam.h):
+                    self._notify( 'ignored', 'edge {}x{} at {}, {}'.format(
                         w, h, x, y ) )
                 else:
                     # TODO: Vary color based on type of object.
                     # TODO: Send notifier w/ summary of current objects.
                     # TODO: Make this summary retained.
-                    logger_movement.info( 'movement: {}x{} at {}, {}'.format(
+                    # TODO: Send image data.
+                    self._notify( 'movement', '{}x{} at {}, {}'.format(
                         w, h, x, y ) )
-                    for notifier in self.notifiers:
-                        # TODO: Send image data.
-                        notifier.send( 'movement', '{}x{} at {}, {}'.format(
-                            w, h, x, y ) )
 
                     timestamp = datetime.now().strftime(
                         '%Y-%m-%d-%H-%M-%S-%f' )
