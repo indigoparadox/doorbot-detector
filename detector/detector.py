@@ -11,13 +11,14 @@ CAPTURE_VIDEO = 1
 CAPTURE_PHOTO = 2
 
 class CaptureEncoder( Thread ):
-    def __init__( self, path, frames, w, h ):
+    def __init__( self, path, frames, w, h, fps ):
         super().__init__()
 
         self.path = path
         self.frames = frames
         self.w = w
         self.h = h
+        self.fps = fps
 
     def run( self ):
 
@@ -74,6 +75,7 @@ class Detector( Thread ):
                 logger.info( 'capturing photos' )
 
         self.capture_frames = []
+        self.capture_fps = float( kwargs['cfps'] ) if 'cfps' in kwargs else 15.0
 
         logger.info( 'saving snapshots to {}'.format( self.snapshots ) )
 
@@ -81,7 +83,7 @@ class Detector( Thread ):
         logger.debug( 'blur: {}'.format( self.blur ) )
 
         self.back_sub = cv2.createBackgroundSubtractorMOG2(
-            history=150,
+            history=int( kwargs['history'] ) if 'history' in kwargs else 150,
             varThreshold=int( kwargs['varthreshold'] ) \
                 if 'varthreshold' in kwargs else 25,
             detectShadows=True )
@@ -180,7 +182,8 @@ class Detector( Thread ):
                             self.capture_timestamp ),
                         self.capture_frames,
                         self.cam.w,
-                        self.cam.h )
+                        self.cam.h,
+                        self.capture_fps )
                     self.capture_frames = []
                     encoder.start()
 

@@ -38,7 +38,10 @@ class MQTTNotifier( Notifier ):
         self.mqtt.connect( kwargs['host'], int( kwargs['port'] ) )
 
     def send( self, subject, message ):
-        self.mqtt.publish( '{}/{}'.format( self.topic, subject ), message )
+        logger = logging.getLogger( 'mqtt.send' )
+        topic = '{}/{}'.format( self.topic, subject )
+        logger.debug( 'publishing {} to {}...'.format( message, topic ) ) 
+        self.mqtt.publish( topic, message )
 
     def on_connected( self, client, userdata, flags, rc ):
         logger = logging.getLogger( 'mqtt.connected' )
