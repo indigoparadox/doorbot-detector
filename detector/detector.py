@@ -58,9 +58,11 @@ class Detector( Thread ):
 
         self.cam = kwargs['camera']
 
-        self.reserver = None
-        if 'reserver' in kwargs and kwargs['reserver']:
-            self.reserver = kwargs['reserver']
+        self.observer_threads = []
+        if 'observerthreads' in kwargs:
+            for thd in kwargs['observerthreads']:
+                self.observer_threads.append( thd )
+                thd.start()
 
     def _notify( self, subject, message ):
         for notifier in self.notifiers:
@@ -144,9 +146,9 @@ class Detector( Thread ):
                 for capturer in self.capturers:
                     capturer.process_motion( frame, self.cam.w, self.cam.h )
 
-            logger.debug( 'setting frame...' )
-            if self.reserver:
-                self.reserver.frame = frame
+            for thd in self.observer_threads:
+                logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
+                thd.frame = frame
 
             # TODO: Smarter/configurable FPS limiter.
             time.sleep( 0.1 )

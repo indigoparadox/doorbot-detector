@@ -5,7 +5,7 @@ import logging
 import threading
 import argparse
 from detector.notifier import MQTTNotifier, LoggerNotifier
-from detector.reserver import ReserverThread
+from detector.reserver import ReserverThread, DisplayThread
 from detector.detector import Detector
 from detector.camera import Camera
 from configparser import ConfigParser
@@ -43,10 +43,6 @@ def main():
     cam = Camera( config['stream']['url'] )
     cam.start()
 
-    reserver_cfg = dict( config.items( 'reserver' ) )
-    reserver_thread = ReserverThread( **reserver_cfg )
-    reserver_thread.start()
-
     # Setup the notifier.
 
     notifiers = []
@@ -66,7 +62,9 @@ def main():
     # Setup the detector, the star of the show.
 
     detector_cfg = dict( config.items( 'stream' ) )
-    detector_cfg['reserver'] = reserver_thread.server
+    detector_cfg['observerthreads'] = [
+        ReserverThread( **detector_cfg ),
+        DisplayThread( **detector_cfg ) ]
     detector_cfg['camera'] = cam
     detector_cfg['notifiers'] = notifiers
     app = Detector( **detector_cfg )
