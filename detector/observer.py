@@ -35,7 +35,7 @@ class FramebufferThread( ObserverThread ):
         
         super().__init__( **kwargs )
 
-        self.fb_path = kwargs['fbpath'] if 'fbpath' in kwargs else '/dev/fb0'
+        self.path = kwargs['path'] if 'path' in kwargs else '/dev/fb0'
         self.width = int( kwargs['width'] ) if 'width' in kwargs else None
         self.height = int( kwargs['height'] ) if 'height' in kwargs else None
 
@@ -45,7 +45,7 @@ class FramebufferThread( ObserverThread ):
 
         while True:
             self.timer.loop_timer_start()
-            with open( '/dev/fb0', 'rb+' ) as fb:
+            with open( self.path, 'rb+' ) as fb:
                 try:
                     # Process the image for the framebuffer.
                     self.frame = cv2.cvtColor( self.frame, cv2.COLOR_BGR2BGRA )

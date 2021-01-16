@@ -10,6 +10,8 @@ class Capture( object ):
     def __init__( self, **kwargs ):
 
         self.path = kwargs['snapshots'] if 'snapshots' in kwargs else '/tmp'
+        self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
+            '%Y-%m-%d-%H-%M-%S-%f'
 
     def start_motion( self, frame ):
         pass
@@ -69,8 +71,7 @@ class VideoCapture( Capture ):
 
     def _create_or_append_to_encoder( self, frame, w, h ):
         if None == self.encoder:
-            timestamp = datetime.now().strftime(
-                '%Y-%m-%d-%H-%M-%S-%f' )
+            timestamp = datetime.now().strftime( self.ts_format )
             self.encoder = self.VideoCaptureWriter(
                 self.path, w, h, self.fps, timestamp )
 
@@ -123,8 +124,7 @@ class PhotoCapture( Capture ):
         super().__init__( **kwargs )
 
     def append_motion( self, frame, w, h ):
-        timestamp = datetime.now().strftime(
-            '%Y-%m-%d-%H-%M-%S-%f' )
+        timestamp = datetime.now().strftime( self.ts_format )
         encoder = self.PhotoCaptureWriter( self.path, timestamp )
         encoder.start()
 
