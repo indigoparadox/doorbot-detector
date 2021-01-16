@@ -5,10 +5,23 @@ import logging
 import threading
 import argparse
 from detector.notifier import MQTTNotifier, LoggerNotifier
-from detector.reserver import ReserverThread, DisplayThread
+from detector.capture import VideoCapture, PhotoCapture
+from detector.observer import ReserverThread, FramebufferThread
 from detector.detector import Detector
 from detector.camera import Camera
 from configparser import ConfigParser
+
+def load_module_config( config, key ):
+    out_cfg = {}
+    try:
+        out_cfg = dict( config.items( key ) )
+    except Exception as e:
+        logging.error( e )
+
+    if 'enable' in out_cfg and 'true' == out_cfg['enable']:
+        return out_cfg
+
+    return None
 
 def main():
     
@@ -49,24 +62,37 @@ def main():
 
     notifiers.append( LoggerNotifier() )
 
-    mqtt = {}
-    try:
-        mqtt_cfg = dict( config.items( 'mqtt' ) )
-    except Exception as e:
-        logging.error( e )
+    mqtt_cfg = load_module_config( config, 'mqtt' )
+    if None != mqtt_cfg:
+        notifiers.append( MQTTNotifier( **mqtt_cfg ) )
 
-    if 'enable' in mqtt_cfg and 'true' == mqtt_cfg['enable']:
-        mqtt = MQTTNotifier( **mqtt_cfg )
-        notifiers.append( mqtt )
+    capturers = []
+
+    vcap_cfg = load_module_config( config, 'videocap' )
+    if None != vcap_cfg:
+        capturers.append( VideoCapture( **vcap_cfg ) )
+        
+    pcap_cfg = load_module_config( config, 'photocap' )
+    if None != pcap_cfg:
+        capturers.append( PhotoCapture( **pcap_cfg ) )
+    
+    observer_threads = []
+
+    fb_cfg = load_module_config( config, 'framebuffer' )
+    if None != fb_cfg:
+        observer_threads.append( FramebufferThread( **fb_cfg ) )
+
+    rsrv_cfg = load_module_config( config, 'reserver' )
+    if None != rsrv_cfg:
+        observer_threads.append( ReserverThread( **rsrv_cfg ) )
 
     # Setup the detector, the star of the show.
 
     detector_cfg = dict( config.items( 'stream' ) )
-    detector_cfg['observerthreads'] = [
-        ReserverThread( **detector_cfg ),
-        DisplayThread( **detector_cfg ) ]
     detector_cfg['camera'] = cam
     detector_cfg['notifiers'] = notifiers
+    detector_cfg['capturers'] = capturers
+    detector_cfg['observers'] = observer_threads
     app = Detector( **detector_cfg )
     app.start()
     app.join()

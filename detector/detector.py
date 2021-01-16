@@ -3,7 +3,6 @@ import cv2
 import numpy
 import logging
 import time
-from .capture import VideoCapture, PhotoCapture
 from threading import Thread
 
 CAPTURE_NONE = 0
@@ -23,6 +22,8 @@ class Detector( Thread ):
         logger.debug( 'setting up detector...' )
 
         self.notifiers = kwargs['notifiers']
+        self.capturers = kwargs['capturers']
+        self.observer_threads = kwargs['observers']
 
         self.min_w = int( kwargs['minw'] ) if 'minw' in kwargs else 0
         self.min_h = int( kwargs['minh'] ) if 'minh' in kwargs else 0
@@ -37,14 +38,6 @@ class Detector( Thread ):
         self.threshold = \
             int( kwargs['threshold'] ) if 'threshold' in kwargs else 127
 
-        self.capturers = []
-        if 'capture' in kwargs:
-            cap_list = kwargs['capture'].split( ',' )
-            if 'video' in cap_list:
-                self.capturers.append( VideoCapture( **kwargs ) )
-            if 'photo' in cap_list:
-                self.capturers.append( PhotoCapture( **kwargs ) )
-
         logger.debug( 'threshold: {}'.format( self.threshold ) )
         logger.debug( 'blur: {}'.format( self.blur ) )
 
@@ -58,11 +51,8 @@ class Detector( Thread ):
 
         self.cam = kwargs['camera']
 
-        self.observer_threads = []
-        if 'observerthreads' in kwargs:
-            for thd in kwargs['observerthreads']:
-                self.observer_threads.append( thd )
-                thd.start()
+        for thd in self.observer_threads:
+            thd.start()
 
     def _notify( self, subject, message ):
         for notifier in self.notifiers:
