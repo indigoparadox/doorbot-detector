@@ -3,38 +3,12 @@ import cv2
 import numpy
 import logging
 import time
-from datetime import datetime
+from .capture import VideoCapture, PhotoCapture
 from threading import Thread
 
 CAPTURE_NONE = 0
 CAPTURE_VIDEO = 1
 CAPTURE_PHOTO = 2
-
-class CaptureEncoder( Thread ):
-    def __init__( self, path, frames, w, h, fps ):
-        super().__init__()
-
-        self.path = path
-        self.frames = frames
-        self.w = w
-        self.h = h
-        self.fps = fps
-
-    def run( self ):
-
-        logger = logging.getLogger( 'detector.capture.encoder' )
-
-        logger.info( 'encoding {} ({} frames)...'.format(
-            self.path, len( self.frames ) ) )
-
-        fourcc = cv2.VideoWriter_fourcc( *'MP4V' )
-        encoder = \
-            cv2.VideoWriter( self.path, fourcc, 20.0, (self.w, self.h) )
-        for frame in self.frames:
-            encoder.write( frame )
-        encoder.release()
-
-        logger.info( 'encoding {} completed'.format( self.path ) )
 
 class Detector( Thread ):
 
@@ -50,7 +24,6 @@ class Detector( Thread ):
 
         self.notifiers = kwargs['notifiers']
 
-        self.snapshots = kwargs['snapshots'] if 'snapshots' in kwargs else '/tmp'
         self.min_w = int( kwargs['minw'] ) if 'minw' in kwargs else 0
         self.min_h = int( kwargs['minh'] ) if 'minh' in kwargs else 0
         self.ignore_edges = True if 'ignoreedges' in kwargs and \
@@ -63,23 +36,14 @@ class Detector( Thread ):
         self.blur = int( kwargs['blur'] ) if 'blur' in kwargs else 5
         self.threshold = \
             int( kwargs['threshold'] ) if 'threshold' in kwargs else 127
-        self.grace_frames = int( kwargs['graceframes'] ) \
-            if 'graceframes' in kwargs else 0
 
-        self.capture = []
+        self.capturers = []
         if 'capture' in kwargs:
             cap_list = kwargs['capture'].split( ',' )
             if 'video' in cap_list:
-                self.capture.append( CAPTURE_VIDEO )
-                logger.info( 'capturing videos' )
+                self.capturers.append( VideoCapture( **kwargs ) )
             if 'photo' in cap_list:
-                self.capture.append( CAPTURE_PHOTO )
-                logger.info( 'capturing photos' )
-
-        self.capture_frames = []
-        self.capture_fps = float( kwargs['cfps'] ) if 'cfps' in kwargs else 15.0
-
-        logger.info( 'saving snapshots to {}'.format( self.snapshots ) )
+                self.capturers.append( PhotoCapture( **kwargs ) )
 
         logger.debug( 'threshold: {}'.format( self.threshold ) )
         logger.debug( 'blur: {}'.format( self.blur ) )
@@ -110,8 +74,6 @@ class Detector( Thread ):
 
         logger.debug( 'starting detector loop...' )
 
-        grace_remaining = 0
-
         while self.running:
             res, frame = self.cam.frame()
             if not res:
@@ -140,65 +102,47 @@ class Detector( Thread ):
             areas = [cv2.contourArea(c) for c in contours]
 
             if 0 < len( areas ):
+                # Motion frames were found.
+
                 max_idx = numpy.argmax( areas )
 
                 cnt_iter = contours[max_idx]
                 x, y, w, h = cv2.boundingRect( cnt_iter )
 
                 if self.min_w > w or self.min_h > h:
+                    # Filter out small movements.
                     self._notify( 'ignored', 'small {}x{} at {}, {}'.format(
                         w, h, x, y ) )
+
                 elif self.ignore_edges and \
                 (0 == w or \
                 0 == h or \
                 x + w >= self.cam.w or \
                 y + h >= self.cam.h):
+                    # Filter out edge movements.
                     self._notify( 'ignored', 'edge {}x{} at {}, {}'.format(
                         w, h, x, y ) )
+
                 else:
+                    # Process a valid movement.
 
-                    timestamp = datetime.now().strftime(
-                        '%Y-%m-%d-%H-%M-%S-%f' )
-                    if CAPTURE_PHOTO in self.capture:
-                        cv2.imwrite( '{}/{}.jpg'.format(
-                            self.snapshots, timestamp ), frame )
-                    if CAPTURE_VIDEO in self.capture:
-                        if 0 == len( self.capture_frames ):
-                            self.capture_timestamp = datetime.now().strftime(
-                                '%Y-%m-%d-%H-%M-%S-%f' )
-                        self.capture_frames.append( frame.copy() )
-
-                        # Start grace countdown.
-                        grace_remaining = self.grace_frames
+                    for capturer in self.capturers:
+                        capturer.append_motion( frame, self.cam.w, self.cam.h )
 
                     # TODO: Vary color based on type of object.
                     # TODO: Send notifier w/ summary of current objects.
                     # TODO: Make this summary retained.
                     # TODO: Send image data.
-                    self._notify( 'movement', '{}x{} at {}, {} ({}f)'.format(
-                        w, h, x, y, len( self.capture_frames ) ) )
+                    self._notify( 'movement', '{}x{} at {}, {}'.format(
+                        w, h, x, y ) )
 
                     color = (255, 0, 0)
                     cv2.rectangle( frame, (x, y), (x + w, y + h), color, 3 )
 
-            elif 0 < grace_remaining and CAPTURE_VIDEO in self.capture:
-                    # Append grace frame.
-                    self.capture_frames.append( frame.copy() )
-                    grace_remaining -= 1
-
-            elif 0 < len( self.capture_frames ):
-                if CAPTURE_VIDEO in self.capture:
-                    # Ship the frames off to a separate thread to write out.
-                    encoder = CaptureEncoder( 
-                        '{}/{}.mp4'.format(
-                            self.snapshots,
-                            self.capture_timestamp ),
-                        self.capture_frames,
-                        self.cam.w,
-                        self.cam.h,
-                        self.capture_fps )
-                    self.capture_frames = []
-                    encoder.start()
+            else:
+                # No motion frames were found, digest capture pipeline.
+                for capturer in self.capturers:
+                    capturer.process_motion( frame, self.cam.w, self.cam.h )
 
             logger.debug( 'setting frame...' )
             if self.reserver:
