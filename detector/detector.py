@@ -63,6 +63,8 @@ class Detector( Thread ):
         self.blur = int( kwargs['blur'] ) if 'blur' in kwargs else 5
         self.threshold = \
             int( kwargs['threshold'] ) if 'threshold' in kwargs else 127
+        self.grace_frames = int( kwargs['graceframes'] ) \
+            if 'graceframes' in kwargs else 0
 
         self.capture = []
         if 'capture' in kwargs:
@@ -107,6 +109,8 @@ class Detector( Thread ):
         logger = logging.getLogger( 'detector.run' )
 
         logger.debug( 'starting detector loop...' )
+
+        grace_remaining = 0
 
         while self.running:
             res, frame = self.cam.frame()
@@ -164,6 +168,9 @@ class Detector( Thread ):
                                 '%Y-%m-%d-%H-%M-%S-%f' )
                         self.capture_frames.append( frame.copy() )
 
+                        # Start grace countdown.
+                        grace_remaining = self.grace_frames
+
                     # TODO: Vary color based on type of object.
                     # TODO: Send notifier w/ summary of current objects.
                     # TODO: Make this summary retained.
@@ -173,6 +180,12 @@ class Detector( Thread ):
 
                     color = (255, 0, 0)
                     cv2.rectangle( frame, (x, y), (x + w, y + h), color, 3 )
+
+            elif 0 < grace_remaining and CAPTURE_VIDEO in self.capture:
+                    # Append grace frame.
+                    self.capture_frames.append( frame.copy() )
+                    grace_remaining -= 1
+
             elif 0 < len( self.capture_frames ):
                 if CAPTURE_VIDEO in self.capture:
                     # Ship the frames off to a separate thread to write out.
