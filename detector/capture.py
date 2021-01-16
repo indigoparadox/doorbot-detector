@@ -63,7 +63,7 @@ class VideoCapture( Capture ):
 
         self.grace_frames = int( kwargs['graceframes'] ) \
             if 'graceframes' in kwargs else 0
-        self.fps = float( kwargs['cfps'] ) if 'cfps' in kwargs else 15.0
+        self.fps = float( kwargs['fps'] ) if 'fps' in kwargs else 15.0
 
         self.encoder = None
 

@@ -4,6 +4,7 @@ import numpy
 import logging
 import time
 from threading import Thread
+from .timer import FPSTimer
 
 CAPTURE_NONE = 0
 CAPTURE_VIDEO = 1
@@ -38,6 +39,8 @@ class Detector( Thread ):
         self.threshold = \
             int( kwargs['threshold'] ) if 'threshold' in kwargs else 127
 
+        self.timer = FPSTimer( self, **kwargs )
+
         logger.debug( 'threshold: {}'.format( self.threshold ) )
         logger.debug( 'blur: {}'.format( self.blur ) )
 
@@ -67,6 +70,7 @@ class Detector( Thread ):
         logger.debug( 'starting detector loop...' )
 
         while self.running:
+            self.timer.loop_timer_start()
             res, frame = self.cam.frame()
             if not res:
                 logger.warning( 'waiting...' )
@@ -140,6 +144,5 @@ class Detector( Thread ):
                 logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
                 thd.frame = frame
 
-            # TODO: Smarter/configurable FPS limiter.
-            time.sleep( 0.1 )
+            self.timer.loop_timer_end()
 
