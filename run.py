@@ -7,7 +7,7 @@ import argparse
 from detector.notifier import MQTTNotifier, LoggerNotifier
 from detector.capture import VideoCapture, PhotoCapture
 from detector.observer import ReserverThread, FramebufferThread
-from detector.detector import Detector
+from detector.detector import MotionDetector
 from detector.camera import Camera
 from configparser import ConfigParser
 
@@ -40,13 +40,11 @@ def main():
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
         logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
-        logging.getLogger( 'detector.run.movement' ).setLevel( logging.DEBUG )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
     else:
         logging.basicConfig( level=logging.INFO )
         logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
-        logging.getLogger( 'detector.run.movement' ).setLevel( logging.DEBUG )
 
     config = ConfigParser()
     config.read( args.config )
@@ -88,7 +86,7 @@ def main():
     detector_threads = []
     motion_cfg = load_module_config( config, 'motiondetect' )
     if None != motion_cfg:
-        detector_threads.append( Detector( **motion_cfg ) )
+        detector_threads.append( MotionDetector( **motion_cfg ) )
 
     # Setup the camera, the star of the show.
 

@@ -24,6 +24,7 @@ class ObserverThread( threading.Thread ):
         self._source_lock = threading.Lock()
         self._frame = None
         self.timer = FPSTimer( self, **kwargs )
+        self.running = True
 
 class FramebufferThread( ObserverThread ):
 
@@ -43,7 +44,7 @@ class FramebufferThread( ObserverThread ):
 
         logger = logging.getLogger( 'observer.framebuffer.run' )
 
-        while True:
+        while self.running:
             self.timer.loop_timer_start()
             with open( self.path, 'rb+' ) as fb:
                 try:
@@ -75,7 +76,7 @@ class ReserverHandler( BaseHTTPRequestHandler ):
         )
         self.end_headers()
 
-        while True:
+        while self.server.thread.running:
             self.server.thread.timer.loop_timer_start()
             jpg = None
             try:
