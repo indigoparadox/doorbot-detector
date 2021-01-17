@@ -6,7 +6,7 @@ import threading
 class FPSTimer( object ):
 
     def __init__( self, parent, **kwargs ):
-        self._fps_target = int( kwargs['fps'] ) if 'fps' in kwargs else 15
+        self._fps_target = float( kwargs['fps'] ) if 'fps' in kwargs else 15.0
         self._fps_target_delta = 1.0 / self._fps_target # Try fr this proc time.
         self._loop_info = threading.local()
         self.report_frames = int( kwargs['reportframes'] ) \

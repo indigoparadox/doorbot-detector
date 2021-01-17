@@ -3,14 +3,14 @@ import cv2
 import numpy
 import logging
 import time
-from threading import Thread
+import threading
 from .timer import FPSTimer
 
 CAPTURE_NONE = 0
 CAPTURE_VIDEO = 1
 CAPTURE_PHOTO = 2
 
-class Detector( Thread ):
+class Detector( threading.Thread ):
 
     ''' This grabs frames from the camera and detects stuff in them. '''
 
@@ -22,15 +22,17 @@ class Detector( Thread ):
 
         logger.debug( 'setting up detector...' )
 
-        self.notifiers = kwargs['notifiers']
-        self.capturers = kwargs['capturers']
-        self.observer_threads = kwargs['observers']
+        self._source_lock = threading.Lock()
+        self._frame = None
+        self._frame_processed = True
+
+        self.daemon = True
 
         self.min_w = int( kwargs['minw'] ) if 'minw' in kwargs else 0
         self.min_h = int( kwargs['minh'] ) if 'minh' in kwargs else 0
         self.ignore_edges = True if 'ignoreedges' in kwargs and \
             'true' == kwargs['ignoreedges'] else False
-        logger.info( 'minimum movement size: {}x{}, ignore edges: {}'.format(
+        logger.debug( 'minimum movement size: {}x{}, ignore edges: {}'.format(
             self.min_w, self.min_h, self.ignore_edges ) )
         self.wait_max = int( kwargs['waitmax'] ) \
             if 'waitmax' in kwargs else 5
@@ -52,15 +54,17 @@ class Detector( Thread ):
 
         self.kernel = numpy.ones( (20, 20), numpy.uint8 )
 
-        self.cam = kwargs['camera']
+    @property
+    def frame( self ):
+        with self._source_lock:
+            return self._frame
 
-        for thd in self.observer_threads:
-            thd.start()
+    @frame.setter
+    def frame( self, value ):
+        with self._source_lock:
+            self._frame = value
+            self._frame_processed = False
 
-    def _notify( self, subject, message ):
-        for notifier in self.notifiers:
-            notifier.send( subject, message )
-    
     def run( self ):
 
         wait_count = 0
@@ -71,19 +75,16 @@ class Detector( Thread ):
 
         while self.running:
             self.timer.loop_timer_start()
-            res, frame = self.cam.frame()
-            if not res:
-                logger.warning( 'waiting...' )
-                time.sleep( 1 )
-                wait_count += 1
-                if self.wait_max <= wait_count:
-                    # Let systemd restart us.
-                    raise Exception( 'waiting too long for camera!' )
+
+            # Spin until we have a new frame to process.
+            if self._frame_processed:
+                self.timer.loop_timer_end()
                 continue
 
             logger.debug( 'processing frame...' )
+            frame = self.frame.copy()
 
-            # Convert to foreground mask, close gabs, remove noise.
+            # Convert to foreground mask, close gaps, remove noise.
             fg_mask = self.back_sub.apply( frame )
             fg_mask = cv2.morphologyEx( fg_mask, cv2.MORPH_CLOSE, self.kernel )
             fg_mask = cv2.medianBlur( fg_mask, self.blur )
@@ -107,7 +108,7 @@ class Detector( Thread ):
 
                 if self.min_w > w or self.min_h > h:
                     # Filter out small movements.
-                    self._notify( 'ignored', 'small {}x{} at {}, {}'.format(
+                    self.cam.notify( 'ignored', 'small {}x{} at {}, {}'.format(
                         w, h, x, y ) )
 
                 elif self.ignore_edges and \
@@ -116,20 +117,20 @@ class Detector( Thread ):
                 x + w >= self.cam.w or \
                 y + h >= self.cam.h):
                     # Filter out edge movements.
-                    self._notify( 'ignored', 'edge {}x{} at {}, {}'.format(
+                    self.cam.notify( 'ignored', 'edge {}x{} at {}, {}'.format(
                         w, h, x, y ) )
 
                 else:
                     # Process a valid movement.
 
-                    for capturer in self.capturers:
+                    for capturer in self.cam.capturers:
                         capturer.append_motion( frame, self.cam.w, self.cam.h )
 
                     # TODO: Vary color based on type of object.
                     # TODO: Send notifier w/ summary of current objects.
                     # TODO: Make this summary retained.
                     # TODO: Send image data.
-                    self._notify( 'movement', '{}x{} at {}, {}'.format(
+                    self.cam.notify( 'movement', '{}x{} at {}, {}'.format(
                         w, h, x, y ) )
 
                     color = (255, 0, 0)
@@ -137,12 +138,8 @@ class Detector( Thread ):
 
             else:
                 # No motion frames were found, digest capture pipeline.
-                for capturer in self.capturers:
+                for capturer in self.cam.capturers:
                     capturer.process_motion( frame, self.cam.w, self.cam.h )
-
-            for thd in self.observer_threads:
-                logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
-                thd.frame = frame
 
             self.timer.loop_timer_end()
 

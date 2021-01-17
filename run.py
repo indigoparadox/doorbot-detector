@@ -51,11 +51,6 @@ def main():
     config = ConfigParser()
     config.read( args.config )
 
-    # Setup the camera and reserver satellite threads.
-
-    cam = Camera( config['stream']['url'] )
-    cam.start()
-
     # Setup the notifier.
 
     notifiers = []
@@ -66,6 +61,8 @@ def main():
     if None != mqtt_cfg:
         notifiers.append( MQTTNotifier( **mqtt_cfg ) )
 
+    # Add capturer utilities.
+
     capturers = []
 
     vcap_cfg = load_module_config( config, 'videocap' )
@@ -75,6 +72,8 @@ def main():
     pcap_cfg = load_module_config( config, 'photocap' )
     if None != pcap_cfg:
         capturers.append( PhotoCapture( **pcap_cfg ) )
+
+    # Setup the detector and observer satellite threads.
     
     observer_threads = []
 
@@ -86,14 +85,19 @@ def main():
     if None != rsrv_cfg:
         observer_threads.append( ReserverThread( **rsrv_cfg ) )
 
-    # Setup the detector, the star of the show.
+    detector_threads = []
+    motion_cfg = load_module_config( config, 'motiondetect' )
+    if None != motion_cfg:
+        detector_threads.append( Detector( **motion_cfg ) )
 
-    detector_cfg = dict( config.items( 'stream' ) )
-    detector_cfg['camera'] = cam
-    detector_cfg['notifiers'] = notifiers
-    detector_cfg['capturers'] = capturers
-    detector_cfg['observers'] = observer_threads
-    app = Detector( **detector_cfg )
+    # Setup the camera, the star of the show.
+
+    cam_cfg = dict( config.items( 'stream' ) )
+    cam_cfg['notifiers'] = notifiers
+    cam_cfg['capturers'] = capturers
+    cam_cfg['observers'] = observer_threads
+    cam_cfg['detectors'] = detector_threads
+    app = Camera( **cam_cfg )
     app.start()
     app.join()
 
