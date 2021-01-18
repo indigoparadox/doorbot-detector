@@ -21,6 +21,27 @@ class ObserverThread( threading.Thread ):
         self.running = True
         self.overlay = kwargs['overlay'] if 'overlay' in kwargs else None
 
+    def draw_overlay( self, frame ):
+
+        ''' Draw overlay on the frame. Different observers need different
+        processing, so they should call this on the frame just before displaying
+        it. '''
+
+        if not self.overlay:
+            return
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        org = (10, 20)
+        text = self.overlay.split( "\\n" )
+        scale = 0.5
+        color = (255, 255, 255)
+        thickness = 1
+        for line in text:
+            line = self.cam.overlays.line( line )
+            cv2.putText(
+                frame, line, org, font, scale, color, thickness, cv2.LINE_AA )
+            org = (org[0], org[1] + 20)
+
 class FramebufferThread( ObserverThread ):
 
     def __init__( self, **kwargs ):
@@ -59,6 +80,8 @@ class FramebufferThread( ObserverThread ):
                     frame = cv2.resize(
                         frame, (self.width, self.height) )
 
+                self.draw_overlay( frame )
+
                 fb.write( frame )
                 #except Exception as e:
                 #    logger.warn( e )
@@ -91,8 +114,13 @@ class ReserverHandler( BaseHTTPRequestHandler ):
                 self.server.thread.timer.loop_timer_end()
                 continue
 
+            frame = None
             with self.server.thread._frame.get_frame() as fm:
-                ret, jpg = cv2.imencode( '.jpg', fm )
+                frame = fm.copy()
+
+            self.server.thread.draw_overlay( frame )
+
+            ret, jpg = cv2.imencode( '.jpg', fm )
             self.wfile.write( '--jpgboundary'.encode( 'utf-8' ) )
             self.send_header( 'Content-type', 'image/jpeg' )
             self.send_header( 'Content-length', '{}'.format( jpg.size ) )

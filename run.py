@@ -9,6 +9,7 @@ from detector.capture import VideoCapture, PhotoCapture
 from detector.observer import ReserverThread, FramebufferThread
 from detector.detector import MotionDetector
 from detector.camera import Camera
+from detector.overlay import Overlays, WeatherOverlay
 from configparser import ConfigParser
 
 def load_module_config( config, key ):
@@ -88,6 +89,12 @@ def main():
     if None != motion_cfg:
         detector_threads.append( MotionDetector( **motion_cfg ) )
 
+    overlay_thread = Overlays()
+
+    weather_cfg = load_module_config( config, 'weather' )
+    if None != weather_cfg:
+        overlay_thread.overlays.append( WeatherOverlay( **weather_cfg ) )
+    
     # Setup the camera, the star of the show.
 
     cam_cfg = dict( config.items( 'stream' ) )
@@ -95,6 +102,7 @@ def main():
     cam_cfg['capturers'] = capturers
     cam_cfg['observers'] = observer_threads
     cam_cfg['detectors'] = detector_threads
+    cam_cfg['overlays'] = overlay_thread
     app = Camera( **cam_cfg )
     app.start()
     app.join()

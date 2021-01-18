@@ -1,10 +1,11 @@
 
-from threading import Thread
 import logging
 import cv2
+import time
+import threading
 from .util import FPSTimer
 
-class Camera( Thread ):
+class Camera( threading.Thread ):
 
     ''' This should run in the background and keep the stream moving so we
     don't waste time processing old frames. '''
@@ -27,18 +28,22 @@ class Camera( Thread ):
         self.capturers = kwargs['capturers']
         self.observer_threads = kwargs['observers']
         self.detector_threads = kwargs['detectors']
+        self.overlays = kwargs['overlays']
+
+        self.overlays.start()
 
         for thd in self.detector_threads:
             thd.cam = self
             thd.start()
 
         for thd in self.observer_threads:
+            thd.cam = self
             thd.start()
 
     def notify( self, subject, message ):
         for notifier in self.notifiers:
             notifier.send( subject, message )
-    
+
     def run( self ):
         
         logger = logging.getLogger( 'camera.run' )
