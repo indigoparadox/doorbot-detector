@@ -5,26 +5,21 @@ import cv2
 import threading
 from socketserver import ThreadingMixIn
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from .timer import FPSTimer
+from .util import FPSTimer, FrameLock
+from contextlib import contextmanager
 
 class ObserverThread( threading.Thread ):
 
-    @property
-    def frame( self ):
-        return self._frame
-
-    @frame.setter
-    def frame( self, value ):
-        with self._source_lock:
-            self._frame = value
+    def set_frame( self, value ):
+        self._frame.set_frame( value )
 
     def __init__( self, **kwargs ):
         super().__init__()
         self.daemon = True
-        self._source_lock = threading.Lock()
-        self._frame = None
+        self._frame = FrameLock()
         self.timer = FPSTimer( self, **kwargs )
         self.running = True
+        self.overlay = kwargs['overlay'] if 'overlay' in kwargs else None
 
 class FramebufferThread( ObserverThread ):
 
@@ -46,17 +41,28 @@ class FramebufferThread( ObserverThread ):
 
         while self.running:
             self.timer.loop_timer_start()
-            with open( self.path, 'rb+' ) as fb:
-                try:
-                    # Process the image for the framebuffer.
-                    self.frame = cv2.cvtColor( self.frame, cv2.COLOR_BGR2BGRA )
-                    if None != self.width and None != self.height:
-                        self.frame = cv2.resize(
-                            self.frame, (self.width, self.height) )
+            
+            if not self._frame.ready:
+                logger.debug( 'waiting for frame...' )
+                self.timer.loop_timer_end()
+                continue
 
-                    fb.write( self.frame )
-                except Exception as e:
-                    logger.warn( e )
+            with open( self.path, 'rb+' ) as fb:
+                #try:
+                frame = None
+                with self._frame.get_frame() as fm:
+                    frame = fm.copy()
+
+                # Process the image for the framebuffer.
+                frame = cv2.cvtColor( frame, cv2.COLOR_BGR2BGRA )
+                if None != self.width and None != self.height:
+                    frame = cv2.resize(
+                        frame, (self.width, self.height) )
+
+                fb.write( frame )
+                #except Exception as e:
+                #    logger.warn( e )
+
             self.timer.loop_timer_end()
 
 class ReserverHandler( BaseHTTPRequestHandler ):
@@ -79,13 +85,14 @@ class ReserverHandler( BaseHTTPRequestHandler ):
         while self.server.thread.running:
             self.server.thread.timer.loop_timer_start()
             jpg = None
-            try:
-                ret, jpg = cv2.imencode( '.jpg', self.server.thread.frame )
-            except Exception as e:
-                logger.warning( 'encoder error: {} (thread {})'.format(
-                    e, threading.get_ident() ) )
-                time.sleep( 1 )
+
+            if not self.server.thread._frame.ready:
+                logger.debug( 'waiting for frame...' )
+                self.server.thread.timer.loop_timer_end()
                 continue
+
+            with self.server.thread._frame.get_frame() as fm:
+                ret, jpg = cv2.imencode( '.jpg', fm )
             self.wfile.write( '--jpgboundary'.encode( 'utf-8' ) )
             self.send_header( 'Content-type', 'image/jpeg' )
             self.send_header( 'Content-length', '{}'.format( jpg.size ) )

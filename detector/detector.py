@@ -4,7 +4,7 @@ import numpy
 import logging
 import time
 import threading
-from .timer import FPSTimer
+from .util import FPSTimer, FrameLock
 
 CAPTURE_NONE = 0
 CAPTURE_VIDEO = 1
@@ -19,23 +19,16 @@ class Detector( threading.Thread ):
         super().__init__()
 
         self._source_lock = threading.Lock()
-        self._frame = None
+        self._frame = FrameLock()
         self._frame_processed = True
         self.daemon = True
         self.running = True
 
         self.timer = FPSTimer( self, **kwargs )
 
-    @property
-    def frame( self ):
-        with self._source_lock:
-            return self._frame
-
-    @frame.setter
-    def frame( self, value ):
-        with self._source_lock:
-            self._frame = value
-            self._frame_processed = False
+    def set_frame( self, value ):
+        self._frame.set_frame( value )
+        self._frame_processed = False
 
     def detect( self, frame ):
         raise Exception( 'not implemented!' )
@@ -52,12 +45,16 @@ class Detector( threading.Thread ):
             self.timer.loop_timer_start()
 
             # Spin until we have a new frame to process.
-            if self._frame_processed:
+            if self._frame_processed or not self._frame.ready:
+                logger.debug( 'waiting for frame...' )
                 self.timer.loop_timer_end()
                 continue
 
             logger.debug( 'processing frame...' )
-            frame = self.frame.copy()
+
+            frame = None
+            with self._frame.get_frame() as fm:
+                frame = fm.copy()
 
             self.detect( frame )
 

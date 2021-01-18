@@ -2,7 +2,7 @@
 from threading import Thread
 import logging
 import cv2
-from .timer import FPSTimer
+from .util import FPSTimer
 
 class Camera( Thread ):
 
@@ -61,11 +61,11 @@ class Camera( Thread ):
 
             for thd in self.detector_threads:
                 #logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
-                thd.frame = frame
+                thd.set_frame( frame )
 
             for thd in self.observer_threads:
                 #logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
-                thd.frame = frame
+                thd.set_frame( frame )
 
             self.timer.loop_timer_end()
 

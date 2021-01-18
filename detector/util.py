@@ -2,6 +2,7 @@
 import logging
 import time
 import threading
+from contextlib import contextmanager
 
 class FPSTimer( object ):
 
@@ -51,4 +52,49 @@ class FPSTimer( object ):
                 type( self.parent ), 1.0 / (avg_sleep + avg_work),
                 threading.get_ident() ) )
             self._loop_info.durations = []
+
+class FrameLock( object ):
+
+    def __init__( self ):
+        self._frame_ready = threading.Condition( threading.Lock() )
+        self._frame_readers = 0
+        self._frame = None
+        self.ready = False
+
+    @contextmanager
+    def set_frame( self, frame ):
+        logger = logging.getLogger( 'framelock.write' )
+        self._frame_ready.acquire()
+        while 0 < self._frame_readers:
+            logger.debug( 'waiting for write ({} readers, thread {})...'.format(
+                self._frame_readers, threading.get_ident() ) )
+            self._frame_ready.wait()
+        logger.debug( 'locking frame for write (thread {})...'.format(
+            threading.get_ident() ) )
+        self._frame = frame.copy()
+        self.ready = True
+        logger.debug( 'releasing write lock (thread {})'.format(
+            threading.get_ident() ) )
+        self._frame_ready.release()
+
+    @contextmanager
+    def get_frame( self ):
+        logger = logging.getLogger( 'framelock.read' )
+        logger.debug( 'locking frame for read (thread {})...'.format(
+            threading.get_ident() ) )
+        self._frame_ready.acquire()
+        try:
+            self._frame_readers += 1
+        finally:
+            self._frame_ready.release()
+        yield self._frame
+        logger.debug( 'releasing read lock (thread {})'.format(
+            threading.get_ident() ) )
+        self._frame_ready.acquire()
+        try:
+            self._frame_readers -= 1
+            if not self._frame_readers:
+                self._frame_ready.notifyAll()
+        finally:
+            self._frame_ready.release()
 

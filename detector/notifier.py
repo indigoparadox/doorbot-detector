@@ -1,5 +1,6 @@
 
 import logging
+import threading
 
 class Notifier( object ):
     def send( self, subject, message ):
