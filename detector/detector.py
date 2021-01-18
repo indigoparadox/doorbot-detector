@@ -45,7 +45,7 @@ class Detector( threading.Thread ):
             self.timer.loop_timer_start()
 
             # Spin until we have a new frame to process.
-            if self._frame_processed or not self._frame.ready:
+            if self._frame_processed or not self._frame.frame_ready:
                 logger.debug( 'waiting for frame...' )
                 self.timer.loop_timer_end()
                 continue
@@ -112,6 +112,10 @@ class MotionDetector( Detector ):
             fg_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )[-2:]
         areas = [cv2.contourArea(c) for c in contours]
 
+        if 'motion' not in self.cam.overlays.highlights:
+            self.cam.overlays.highlights['motion'] = {'boxes': []}
+        self.cam.overlays.highlights['motion']['boxes'] = []
+
         if 0 < len( areas ):
             # Motion frames were found.
 
@@ -119,7 +123,7 @@ class MotionDetector( Detector ):
 
             cnt_iter = contours[max_idx]
             x, y, w, h = cv2.boundingRect( cnt_iter )
-
+            
             if self.min_w > w or self.min_h > h:
                 # Filter out small movements.
                 #self.cam.notify( 'ignored', 'small {}x{} at {}, {}'.format(
@@ -149,7 +153,10 @@ class MotionDetector( Detector ):
                     w, h, x, y ) )
 
                 color = (255, 0, 0)
-                cv2.rectangle( frame, (x, y), (x + w, y + h), color, 3 )
+                #cv2.rectangle( frame, (x, y), (x + w, y + h), color, 3 )
+                self.cam.overlays.highlights['motion']['boxes'].append( {
+                    'x1': x, 'y1': y, 'x2': x + w, 'y2': y + h, 'color': color
+                } )
 
         else:
             # No motion frames were found, digest capture pipeline.

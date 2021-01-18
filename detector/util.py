@@ -53,48 +53,84 @@ class FPSTimer( object ):
                 threading.get_ident() ) )
             self._loop_info.durations = []
 
-class FrameLock( object ):
+class RWLock( object ):
 
     def __init__( self ):
-        self._frame_ready = threading.Condition( threading.Lock() )
-        self._frame_readers = 0
-        self._frame = None
-        self.ready = False
+        self._ready = threading.Condition( threading.Lock() )
+        self._readers = 0
+        self._wrapped_item = None
+
+    @property
+    def _wrapped_abstraction( self ):
+
+        ''' This should be overwritten in derived classes if e.g. we want to
+        copy the wrapped item on read for frames. '''
+
+        return self._wrapped_item
+
+    @_wrapped_abstraction.setter
+    def _wrapped_abstraction( self, value ):
+
+        ''' This should be overwritten in derived classes if e.g. we want to
+        copy the wrapped item on write for frames. '''
+
+        self._wrapped_item = value
 
     @contextmanager
     def set_frame( self, frame ):
         logger = logging.getLogger( 'framelock.write' )
-        self._frame_ready.acquire()
-        while 0 < self._frame_readers:
+        self._ready.acquire()
+        while 0 < self._readers:
             logger.debug( 'waiting for write ({} readers, thread {})...'.format(
-                self._frame_readers, threading.get_ident() ) )
-            self._frame_ready.wait()
+                self._readers, threading.get_ident() ) )
+            self._ready.wait()
         logger.debug( 'locking frame for write (thread {})...'.format(
             threading.get_ident() ) )
-        self._frame = frame.copy()
-        self.ready = True
+        self._wrapped_abstraction = frame
         logger.debug( 'releasing write lock (thread {})'.format(
             threading.get_ident() ) )
-        self._frame_ready.release()
+        self._ready.release()
 
     @contextmanager
     def get_frame( self ):
         logger = logging.getLogger( 'framelock.read' )
         logger.debug( 'locking frame for read (thread {})...'.format(
             threading.get_ident() ) )
-        self._frame_ready.acquire()
+        self._ready.acquire()
         try:
-            self._frame_readers += 1
+            self._readers += 1
         finally:
-            self._frame_ready.release()
-        yield self._frame
+            self._ready.release()
+        yield self._wrapped_abstraction
         logger.debug( 'releasing read lock (thread {})'.format(
             threading.get_ident() ) )
-        self._frame_ready.acquire()
+        self._ready.acquire()
         try:
-            self._frame_readers -= 1
-            if not self._frame_readers:
-                self._frame_ready.notifyAll()
+            self._readers -= 1
+            if not self._readers:
+                self._ready.notifyAll()
         finally:
-            self._frame_ready.release()
+            self._ready.release()
+
+class FrameLock( RWLock ):
+    def __init__( self ):
+        super().__init__()
+        self.frame_ready = False
+
+    @property
+    def _wrapped_abstraction( self ):
+
+        ''' This should be overwritten in derived classes if e.g. we want to
+        copy the wrapped item on read for frames. '''
+
+        return self._wrapped_item
+
+    @_wrapped_abstraction.setter
+    def _wrapped_abstraction( self, value ):
+
+        ''' This should be overwritten in derived classes if e.g. we want to
+        copy the wrapped item on write for frames. '''
+
+        self._wrapped_item = value.copy()
+        self.frame_ready = True
 

@@ -20,12 +20,22 @@ class ObserverThread( threading.Thread ):
         self.timer = FPSTimer( self, **kwargs )
         self.running = True
         self.overlay = kwargs['overlay'] if 'overlay' in kwargs else None
+        self.highlights = kwargs['highlight'].split( ',' ) \
+            if 'highlight' in kwargs else []
 
     def draw_overlay( self, frame ):
 
         ''' Draw overlay on the frame. Different observers need different
         processing, so they should call this on the frame just before displaying
         it. '''
+
+        for hl in self.highlights:
+            if hl in self.cam.overlays.highlights and \
+            'boxes' in self.cam.overlays.highlights[hl]:
+                for bx in self.cam.overlays.highlights[hl]['boxes']:
+                    cv2.rectangle( frame,
+                        (bx['x1'], bx['y1']),
+                        (bx['x2'], bx['y2']), bx['color'], 3 )
 
         if not self.overlay:
             return
@@ -63,7 +73,7 @@ class FramebufferThread( ObserverThread ):
         while self.running:
             self.timer.loop_timer_start()
             
-            if not self._frame.ready:
+            if not self._frame.frame_ready:
                 logger.debug( 'waiting for frame...' )
                 self.timer.loop_timer_end()
                 continue
@@ -109,7 +119,7 @@ class ReserverHandler( BaseHTTPRequestHandler ):
             self.server.thread.timer.loop_timer_start()
             jpg = None
 
-            if not self.server.thread._frame.ready:
+            if not self.server.thread._frame.frame_ready:
                 logger.debug( 'waiting for frame...' )
                 self.server.thread.timer.loop_timer_end()
                 continue
