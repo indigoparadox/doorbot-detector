@@ -19,8 +19,10 @@ class Camera( threading.Thread ):
 
         self.w = 0
         self.h = 0
+        self.attempts = 0
         self.running = True
-        self._stream = cv2.VideoCapture( kwargs['url'] )
+        self.cam_url = kwargs['url']
+        self._stream = cv2.VideoCapture( self.cam_url )
 
         self.timer = FPSTimer( self, **kwargs )
 
@@ -63,6 +65,17 @@ class Camera( threading.Thread ):
                 logger.debug( 'video is {} high'.format( self.h ) )
 
             ret, frame = self._stream.read()
+
+            if not ret:
+                logger.error( 'camera disconnected!' )
+                self._stream.release()
+                self.attempts += 1
+                logger.info( 'reconnecting (attempt {})'.format(
+                    self.attempts ) )
+                self._stream.open( self.cam_url )
+                continue
+
+            self.attempts = 0
 
             for thd in self.detector_threads:
                 #logger.debug( 'setting frame for {}...'.format( type( thd ) ) )

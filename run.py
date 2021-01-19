@@ -41,11 +41,13 @@ def main():
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
         logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
+        logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
     else:
         logging.basicConfig( level=logging.INFO )
         logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
+        logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
 
     config = ConfigParser()
     config.read( args.config )
