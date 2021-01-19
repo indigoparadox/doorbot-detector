@@ -19,11 +19,7 @@ class Camera( threading.Thread ):
 
         self.w = 0
         self.h = 0
-        self.attempts = 0
         self.running = True
-        self.cam_url = kwargs['url']
-        self._stream = cv2.VideoCapture( self.cam_url )
-
         self.timer = FPSTimer( self, **kwargs )
 
         self.notifiers = kwargs['notifiers']
@@ -46,9 +42,29 @@ class Camera( threading.Thread ):
         for notifier in self.notifiers:
             notifier.send( subject, message )
 
+    def process( self, frame ):
+        logger = logging.getLogger( 'camera.process' )
+        for thd in self.detector_threads:
+            logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
+            thd.set_frame( frame )
+
+        for thd in self.observer_threads:
+            logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
+            thd.set_frame( frame )
+
+class IPCamera( Camera ):
+
+    def __init__( self, **kwargs ):
+
+        self.attempts = 0
+        self.cam_url = kwargs['url']
+        self._stream = cv2.VideoCapture( self.cam_url )
+
+        super().__init__( **kwargs )
+
     def run( self ):
         
-        logger = logging.getLogger( 'camera.run' )
+        logger = logging.getLogger( 'camera.ip.run' )
         
         logger.debug( 'starting camera loop...' )
 
@@ -58,11 +74,11 @@ class Camera( threading.Thread ):
             if self._stream.isOpened() and 0 >= self.w:
                 self.w = \
                     int( self._stream.get( cv2.CAP_PROP_FRAME_WIDTH ) )
-                logger.debug( 'video is {} wide'.format( self.w ) )
+                logger.info( 'video is {} wide'.format( self.w ) )
             if self._stream.isOpened() and 0 >= self.h:
                 self.h = \
                     int( self._stream.get( cv2.CAP_PROP_FRAME_HEIGHT ) )
-                logger.debug( 'video is {} high'.format( self.h ) )
+                logger.info( 'video is {} high'.format( self.h ) )
 
             ret, frame = self._stream.read()
 
@@ -77,13 +93,7 @@ class Camera( threading.Thread ):
 
             self.attempts = 0
 
-            for thd in self.detector_threads:
-                #logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
-                thd.set_frame( frame )
-
-            for thd in self.observer_threads:
-                #logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
-                thd.set_frame( frame )
+            self.process( frame )
 
             self.timer.loop_timer_end()
 

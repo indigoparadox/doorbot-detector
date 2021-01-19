@@ -8,7 +8,7 @@ from detector.notifier import MQTTNotifier, LoggerNotifier
 from detector.capture import VideoCapture, PhotoCapture
 from detector.observer import ReserverThread, FramebufferThread
 from detector.detector import MotionDetector
-from detector.camera import Camera
+from detector.camera import IPCamera
 from detector.overlay import Overlays, WeatherOverlay
 from configparser import ConfigParser
 
@@ -41,12 +41,12 @@ def main():
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
         logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
+        logging.getLogger( 'detector.process' ).setLevel( logging.INFO )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
     else:
         logging.basicConfig( level=logging.INFO )
-        logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
 
     config = ConfigParser()
@@ -105,7 +105,7 @@ def main():
     cam_cfg['observers'] = observer_threads
     cam_cfg['detectors'] = detector_threads
     cam_cfg['overlays'] = overlay_thread
-    app = Camera( **cam_cfg )
+    app = IPCamera( **cam_cfg )
     app.start()
     app.join()
 
