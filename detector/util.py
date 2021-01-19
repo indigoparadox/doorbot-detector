@@ -86,7 +86,10 @@ class RWLock( object ):
             self._ready.wait()
         logger.debug( 'locking frame for write (thread {})...'.format(
             threading.get_ident() ) )
-        self._wrapped_abstraction = frame
+        try:
+            self._wrapped_abstraction = frame
+        except Exception as e:
+            logger.warning( e )
         logger.debug( 'releasing write lock (thread {})'.format(
             threading.get_ident() ) )
         self._ready.release()

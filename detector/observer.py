@@ -22,6 +22,19 @@ class ObserverThread( threading.Thread ):
         self.overlay = kwargs['overlay'] if 'overlay' in kwargs else None
         self.highlights = kwargs['highlight'].split( ',' ) \
             if 'highlight' in kwargs else []
+        self.overlay_coords = \
+            tuple( [int( x ) for x in kwargs['overlaycoords'].split( ',' )] ) \
+            if 'overlaycoords' in kwargs else (10, 10)
+        self.overlay_color = \
+            tuple( [int( x ) for x in kwargs['overlaycolor'].split( ',' )] ) \
+            if 'overlaycolor' in kwargs else (255, 255, 255)
+        self.overlay_scale = float( kwargs['overlayscale'] ) \
+            if 'overlayscale' in kwargs else 0.5
+        self.overlay_thickness = int( kwargs['overlaythickness'] ) \
+            if 'overlaythickness' in kwargs else 1
+        self.overlay_font = \
+            getattr( cv2, 'FONT_{}'.format( kwargs['overlayfont'] ) ) \
+            if 'overlayfont' in kwargs else cv2.FONT_HERSHEY_SIMPLEX
 
     def draw_overlay( self, frame ):
 
@@ -40,16 +53,14 @@ class ObserverThread( threading.Thread ):
         if not self.overlay:
             return
 
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        org = (10, 20)
         text = self.overlay.split( "\\n" )
-        scale = 0.5
-        color = (255, 255, 255)
-        thickness = 1
+        org = self.overlay_coords
         for line in text:
             line = self.cam.overlays.line( line )
             cv2.putText(
-                frame, line, org, font, scale, color, thickness, cv2.LINE_AA )
+                frame, line, org, self.overlay_font,
+                self.overlay_scale, self.overlay_color, self.overlay_thickness,
+                cv2.LINE_AA )
             org = (org[0], org[1] + 20)
 
 class FramebufferThread( ObserverThread ):
@@ -106,6 +117,38 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
         logger.debug( 'connection from {}...'.format( self.address_string() ) )
 
+        if self.path.endswith( '.jpg' ):
+            return self.serve_jpeg()
+        else:
+            return self.serve_mjpeg()
+
+    def log_message(self, format, *args):
+        return
+
+    def serve_jpeg( self ):
+
+        if not self.server.thread._frame.frame_ready:
+            logger.error( 'frame not ready' )
+            self.send_response( 500 )
+            return
+
+        self.send_response( 200 )
+        self.send_header( 'Content-type', 'image/jpeg' )
+        self.end_headers()
+
+        frame = None
+        with self.server.thread._frame.get_frame() as fm:
+            frame = fm.copy()
+
+        self.server.thread.draw_overlay( frame )
+
+        ret, jpg = cv2.imencode( '.jpg', frame )
+        self.wfile.write( jpg.tostring() )
+
+    def serve_mjpeg( self ):
+
+        logger = logging.getLogger( 'reserver.get.mjpeg' )
+
         # Crude mjpeg server.
 
         self.send_response( 200 )
@@ -114,6 +157,11 @@ class ReserverHandler( BaseHTTPRequestHandler ):
             'multipart/x-mixed-replace; boundary=--jpgboundary'
         )
         self.end_headers()
+
+        client_addr = self.client_address[0]
+
+        logger.info( 'serving stream to client {} (thread {})'.format(
+            client_addr, threading.get_ident() ) )
 
         while self.server.thread.running:
             self.server.thread.timer.loop_timer_start()
@@ -130,13 +178,18 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
             self.server.thread.draw_overlay( frame )
 
-            ret, jpg = cv2.imencode( '.jpg', fm )
-            self.wfile.write( '--jpgboundary'.encode( 'utf-8' ) )
-            self.send_header( 'Content-type', 'image/jpeg' )
-            self.send_header( 'Content-length', '{}'.format( jpg.size ) )
-            self.end_headers()
-            self.wfile.write( jpg.tostring() )
-            self.server.thread.timer.loop_timer_end()
+            ret, jpg = cv2.imencode( '.jpg', frame )
+            try:
+                self.wfile.write( '--jpgboundary'.encode( 'utf-8' ) )
+                self.send_header( 'Content-type', 'image/jpeg' )
+                self.send_header( 'Content-length', '{}'.format( jpg.size ) )
+                self.end_headers()
+                self.wfile.write( jpg.tostring() )
+                self.server.thread.timer.loop_timer_end()
+            except BrokenPipeError as e:
+                logger.info( 'client {} disconnected (thread {})'.format(
+                    client_addr, threading.get_ident() ) )
+                return
         
 class Reserver( ThreadingMixIn, HTTPServer ):
 

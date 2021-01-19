@@ -43,6 +43,7 @@ class WeatherOverlay( OverlayHandler ):
             300
         self.last_updated = time.time()
         self.countdown = 0
+        self.format = kwargs['format'] if 'format' in kwargs else '<outTemp>'
 
     def update( self ):
 
@@ -63,8 +64,10 @@ class WeatherOverlay( OverlayHandler ):
         r = requests.get( self.url )
         weather = r.json()
 
+        self.current = self.format
         current = weather['stats']['current']
-        self.current = html.unescape( '{} {} {} {}'.format(
-            current['outTemp'], current['humidity'], current['windSpeed'],
-            current['rainRate'] ) )
+        for token in current:
+            self.current = self.current.replace(
+                '<{}>'.format( token ),
+                html.unescape( current[token] ) )
 
