@@ -127,6 +127,8 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
     def serve_jpeg( self ):
 
+        logger = logging.getLogger( 'reserver.get.jpeg' )
+
         if not self.server.thread._frame.frame_ready:
             logger.error( 'frame not ready' )
             self.send_response( 500 )

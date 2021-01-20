@@ -22,7 +22,7 @@ class Capture( object ):
 class VideoCapture( Capture ):
 
     class VideoCaptureWriter( Thread ):
-        def __init__( self, path, w, h, fps, timestamp ):
+        def __init__( self, path, w, h, fps, timestamp, fourcc, container ):
             super().__init__()
 
             logger = logging.getLogger('capture.video.writer.init' )
@@ -36,17 +36,20 @@ class VideoCapture( Capture ):
             self.w = w
             self.h = h
             self.fps = fps
+            self.fourcc = fourcc
+            self.container = container
 
         def run( self ):
 
             logger = logging.getLogger( 'capture.video.writer.run' )
 
-            filename = '{}/{}.mp4'.format( self.path, self.timestamp )
+            filename = '{}/{}.{}'.format( self.path, self.timestamp,
+                self.container )
 
             logger.info( 'encoding {} ({} frames, {} fps)...'.format(
                 filename, len( self.frames ), self.fps ) )
 
-            fourcc = cv2.VideoWriter_fourcc( *'MP4V' )
+            fourcc = cv2.VideoWriter_fourcc( *(self.fourcc) )
             encoder = \
                 cv2.VideoWriter( filename, fourcc, self.fps, (self.w, self.h) )
             for frame in self.frames:
@@ -66,6 +69,8 @@ class VideoCapture( Capture ):
         self.grace_frames = int( kwargs['graceframes'] ) \
             if 'graceframes' in kwargs else 0
         self.fps = float( kwargs['fps'] ) if 'fps' in kwargs else 15.0
+        self.fourcc = kwargs['fourcc'] if 'fourcc' in kwargs else 'mp4v'
+        self.container = kwargs['container'] if 'container' in kwargs else 'mp4'
 
         self.encoder = None
 
@@ -73,7 +78,8 @@ class VideoCapture( Capture ):
         if None == self.encoder:
             timestamp = datetime.now().strftime( self.ts_format )
             self.encoder = self.VideoCaptureWriter(
-                self.path, w, h, self.fps, timestamp )
+                self.path, w, h, self.fps, timestamp, self.fourcc,
+                self.container )
 
         self.encoder.frames.append( frame )
 

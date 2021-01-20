@@ -153,7 +153,6 @@ class MotionDetector( Detector ):
                     w, h, x, y ) )
 
                 color = (255, 0, 0)
-                #cv2.rectangle( frame, (x, y), (x + w, y + h), color, 3 )
                 self.cam.overlays.highlights['motion']['boxes'].append( {
                     'x1': x, 'y1': y, 'x2': x + w, 'y2': y + h, 'color': color
                 } )
