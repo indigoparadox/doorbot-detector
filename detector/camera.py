@@ -21,6 +21,7 @@ class Camera( threading.Thread ):
         self.h = 0
         self.running = True
         self.timer = FPSTimer( self, **kwargs )
+        self.daemon = True
 
         self.notifiers = kwargs['notifiers']
         self.capturers = kwargs['capturers']

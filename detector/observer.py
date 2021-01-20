@@ -200,6 +200,8 @@ class Reserver( ThreadingMixIn, HTTPServer ):
     def __init__( self, thread, *args, **kwargs ):
         super().__init__( *args, **kwargs )
 
+        self.daemon_threads = True
+
         self.thread = thread
 
 class ReserverThread( ObserverThread ):

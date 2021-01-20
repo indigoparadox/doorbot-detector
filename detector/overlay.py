@@ -13,6 +13,7 @@ class Overlays( threading.Thread ):
         self.running = True
         self.overlays = []
         self.highlights = {}
+        self.daemon = True
 
     def line( self, line ):
         line = line.replace( '<time>', time.strftime( '%H:%M:%S %m/%d/%Y' ) )

@@ -38,6 +38,7 @@ class VideoCapture( Capture ):
             self.fps = fps
             self.fourcc = fourcc
             self.container = container
+            self.daemon = True
 
         def run( self ):
 
@@ -114,6 +115,7 @@ class PhotoCapture( Capture ):
 
             self.path = path
             self.timestamp = timestamp
+            self.daemon = True
 
         def run( self ):
             logger = logging.getLogger( 'capture.photo.writer.run' )
