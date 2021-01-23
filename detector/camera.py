@@ -39,9 +39,12 @@ class Camera( threading.Thread ):
             thd.cam = self
             thd.start()
 
-    def notify( self, subject, message ):
+    def notify( self, subject, message, snapshot=None ):
         for notifier in self.notifiers:
             notifier.send( subject, message )
+        if snapshot:
+            for notifier in self.notifiers:
+                notifier.snapshot( 'snapshot/{}'.format( subject ), snapshot )
 
     def process( self, frame ):
         logger = logging.getLogger( 'camera.process' )

@@ -149,8 +149,9 @@ class MotionDetector( Detector ):
                 # TODO: Send notifier w/ summary of current objects.
                 # TODO: Make this summary retained.
                 # TODO: Send image data.
+                ret, jpg = cv2.imencode( '.jpg', frame )
                 self.cam.notify( 'movement', '{}x{} at {}, {}'.format(
-                    w, h, x, y ) )
+                    w, h, x, y ), snapshot=jpg.tostring() )
 
                 color = (255, 0, 0)
                 self.cam.overlays.highlights['motion']['boxes'].append( {

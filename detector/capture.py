@@ -9,7 +9,7 @@ class Capture( object ):
 
     def __init__( self, **kwargs ):
 
-        self.path = kwargs['snapshots'] if 'snapshots' in kwargs else '/tmp'
+        self.path = kwargs['path'] if 'path' in kwargs else '/tmp'
         self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
             '%Y-%m-%d-%H-%M-%S-%f'
 

@@ -6,6 +6,9 @@ class Notifier( object ):
     def send( self, subject, message ):
         pass
 
+    def snapshot( self, subject, attachment ):
+        pass
+
 class LoggerNotifier( Notifier ):
     def __init__( self, **kwargs ):
         self.logger = logging.getLogger( 'detector.run.movement' )
@@ -23,6 +26,9 @@ class MQTTNotifier( Notifier ):
 
         from paho.mqtt import client as mqtt_client
         import ssl
+
+        self.snapshots = True if 'snapshots' in kwargs \
+            and 'true' == kwargs['snapshots'] else False
 
         self.topic = kwargs['topic']
         self.mqtt = mqtt_client.Client(
@@ -43,6 +49,15 @@ class MQTTNotifier( Notifier ):
         topic = '{}/{}'.format( self.topic, subject )
         logger.debug( 'publishing {} to {}...'.format( message, topic ) ) 
         self.mqtt.publish( topic, message )
+
+    def snapshot( self, subject, attachment ):
+        logger = logging.getLogger( 'mqtt.snapshot' )
+        if not self.snapshot:
+            return
+        topic = '{}/{}'.format( self.topic, subject )
+        sz = round( len( attachment ) / 1024, 2 )
+        logger.debug( 'snapshot ({}kB) to {}...'.format( sz, topic ) )
+        self.mqtt.publish( topic, attachment )
 
     def on_connected( self, client, userdata, flags, rc ):
         logger = logging.getLogger( 'mqtt.connected' )

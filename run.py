@@ -41,7 +41,8 @@ def main():
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
         logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
-        logging.getLogger( 'detector.process' ).setLevel( logging.INFO )
+        logging.getLogger( 'detector.process' ).setLevel( logging.WARNING )
+        logging.getLogger( 'camera.process' ).setLevel( logging.WARNING )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
