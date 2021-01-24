@@ -24,7 +24,11 @@ def load_module_config( config, key ):
 
     return None
 
+logger = None
+
 def main():
+
+    global logger
     
     parser = argparse.ArgumentParser()
 
@@ -49,6 +53,7 @@ def main():
     else:
         logging.basicConfig( level=logging.INFO )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
+    logger = logging.getLogger( 'main' )
 
     config = ConfigParser()
     config.read( args.config )
@@ -107,9 +112,13 @@ def main():
     cam_cfg['detectors'] = detector_threads
     cam_cfg['overlays'] = overlay_thread
     app = IPCamera( **cam_cfg )
+
     app.start()
     app.join()
 
 if '__main__' == __name__:
-    main()
+    try:
+        main()
+    except KeyboardInterrupt as e:
+        logger.info( 'quitting on ctrl-c' )
 
