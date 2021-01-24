@@ -17,7 +17,7 @@ ignoreedges=false
 [videocap]
 enable=true
 graceframes=10
-snapshots=/srv/snapshots
+path=/srv/snapshots
 fps=5.0
 fourcc=mp4v
 container=mp4
@@ -25,13 +25,14 @@ container=mp4
 
 [photocap]
 enable=false
-snapshots=/srv/snapshots
+path=/srv/snapshots
 #tsformat=%Y-%m-%d-%H-%M-%S-%f
 
 [snapserve]
 enable=true
 listen=127.0.0.1
 port=8000
+path=/srv/snapshots
 
 [framebuffer]
 enable=true
@@ -67,6 +68,7 @@ port=8883
 ssl=true
 logger=false
 snapshots=true
+snapsretain=true
 ca=
 topic=
 uid=
