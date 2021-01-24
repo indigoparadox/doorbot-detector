@@ -19,6 +19,9 @@ class ObserverThread( threading.Thread ):
         self._frame = FrameLock()
         self.timer = FPSTimer( self, **kwargs )
         self.running = True
+
+        # Overlay options. These are mostly OpenCV-specific, hence them being
+        # here in the observer.
         self.overlay = kwargs['overlay'] if 'overlay' in kwargs else None
         self.highlights = kwargs['highlight'].split( ',' ) \
             if 'highlight' in kwargs else []
