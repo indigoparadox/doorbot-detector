@@ -11,12 +11,13 @@ from PIL import ImageTk, Image
 
 class SnapWindow( Frame ):
 
-    def __init__( self, master, topic, ca, host, port, uid, use_ssl, snapsz ):
+    def __init__( self, master, **kwargs ):
         super().__init__( master )
         
         logger = logging.getLogger( 'window.init' )
 
-        self.snap_size = snapsz
+        self.snap_size = \
+            tuple( [int( x ) for x in kwargs['snapsize'].split( ',' )] )
 
         self.pack()
 
@@ -26,16 +27,19 @@ class SnapWindow( Frame ):
         self.image = Label( self, image=self.image_tk )
         self.image.pack( fill="both", expand="yes" )
         
-        self.mqtt = mqtt_client.Client( uid, True, None, mqtt_client.MQTTv31 )
+        self.mqtt = mqtt_client.Client(
+            'window-{}'.format( kwargs['uid'] ),
+            True, None, mqtt_client.MQTTv31 )
         self.mqtt.loop_start()
         self.mqtt.enable_logger()
-        self.topic = topic
-        self.mqtt.message_callback_add( topic, self.on_received )
-        if use_ssl:
-            self.mqtt.tls_set( ca, tls_version=ssl.PROTOCOL_TLSv1_2 )
+        self.topic = '{}/snapshot/movement'.format( kwargs['topic'] )
+        self.mqtt.message_callback_add( self.topic, self.on_received )
+        if 'ssl' in kwargs and 'true' == kwargs['ssl']:
+            self.mqtt.tls_set( kwargs['ca'], tls_version=ssl.PROTOCOL_TLSv1_2 )
         self.mqtt.on_connect = self.on_connected
-        logger.info( 'connecting to MQTT at {}:{}...'.format( host, port ) )
-        self.mqtt.connect( host, port )
+        host_port = (kwargs['host'], int( kwargs['port'] ))
+        logger.info( 'connecting to MQTT at {}...'.format( host_port ) )
+        self.mqtt.connect( host_port[0], host_port[1] )
 
     def on_connected( self, client, userdata, flags, rc ):
         logger = logging.getLogger( 'window.connected' )
@@ -73,21 +77,12 @@ def main():
     config.read( args.config )
 
     root = Tk()
-    #root.lift()
+    root.title( 'Camera Activity' )
     root.attributes( '-topmost', True )
 
-    snapsize = \
-        tuple( [int( x ) for x in config['mqtt']['snapsize'].split( ',' )] )
+    win_cfg = dict( config.items( 'mqtt' ) )
 
-    win = SnapWindow(
-        root,
-        config['mqtt']['topic'] + '/snapshot/movement',
-        config['mqtt']['ca'],
-        config['mqtt']['host'],
-        config.getint( 'mqtt', 'port' ),
-        'window-' + config['mqtt']['uid'],
-        True if 'true' == config['mqtt']['ssl'] else False,
-        snapsize )
+    win = SnapWindow( root, **win_cfg )
 
     win.mainloop()
 
