@@ -38,7 +38,8 @@ def main():
 
     verbosity_grp.add_argument( '-q', '--quiet', action='store_true' )
 
-    parser.add_argument( '-c', '--config', action='store' )
+    parser.add_argument(
+        '-c', '--config', action='store', default='detector.ini' )
 
     args = parser.parse_args()
 
