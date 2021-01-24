@@ -6,7 +6,7 @@ import io
 import shutil
 from datetime import datetime
 from threading import Thread
-from ftplib import FTP
+from ftplib import FTP, FTP_TLS
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 
@@ -29,7 +29,7 @@ class Capture( object ):
 class VideoCapture( Capture ):
 
     class VideoCaptureWriter( Thread ):
-        def __init__( self, path, bkp, w, h, fps, ts, fourcc, container ):
+        def __init__( self, path, bkp, w, h, fps, ts, fourcc, cont, ftpssl ):
             super().__init__()
 
             logger = logging.getLogger('capture.video.writer.init' )
@@ -37,6 +37,7 @@ class VideoCapture( Capture ):
             self.timestamp = ts
             self.path = path
             self.backup_path = bkp
+            self.ftp_ssl = ftpssl
 
             logger.debug( 'creating video writer for {}.mp4...'.format(
                 os.path.join( self.path, self.timestamp ) ) )
@@ -46,7 +47,7 @@ class VideoCapture( Capture ):
             self.h = h
             self.fps = fps
             self.fourcc = fourcc
-            self.container = container
+            self.container = cont
             self.daemon = True
 
         def upload_ftp( self, filepath  ):
@@ -57,7 +58,14 @@ class VideoCapture( Capture ):
             pr = urlparse( self.path )
             logger.info( 'logging into ftp at {} as {}...'.format(
                 pr.hostname, pr.username ) )
-            ftp = FTP( host=pr.hostname, user=pr.username, passwd=pr.password )
+            ftp = None
+            if self.ftp_ssl:
+                ftp = FTP_TLS( host=pr.hostname )
+            else:
+                ftp = FTP( host=pr.hostname )
+            ftp.login( user=pr.username, passwd=pr.password )
+            if self.ftp_ssl:
+                ftp.prot_p()
             ftp.cwd( pr.path )
 
             logger.info( 'uploading {}...'.format( filepath ) )
@@ -113,6 +121,8 @@ class VideoCapture( Capture ):
         logger = logging.getLogger( 'capture.video.init' )
         logger.info( 'setting up video capture...' )
 
+        self.ftp_ssl = True if 'ftpssl' in kwargs and \
+            'true' == kwargs['ftpssl'] else False
         self.grace_remaining = 0
         self.grace_frames = int( kwargs['graceframes'] ) \
             if 'graceframes' in kwargs else 0
@@ -127,7 +137,7 @@ class VideoCapture( Capture ):
             timestamp = datetime.now().strftime( self.ts_format )
             self.encoder = self.VideoCaptureWriter(
                 self.path, self.backup_path, w, h, self.fps,
-                timestamp, self.fourcc, self.container )
+                timestamp, self.fourcc, self.container, self.ftp_ssl )
 
         self.encoder.frames.append( frame )
 
