@@ -34,6 +34,9 @@ class OverlayHandler( object ):
     def __init__( self, **kwargs ):
         self.current = ''
 
+    def update( self ):
+        pass
+
 class WeatherOverlay( OverlayHandler ):
 
     def __init__( self, **kwargs ):

@@ -1,6 +1,7 @@
 
 import logging
 import threading
+import time
 
 class Notifier( object ):
     def send( self, subject, message ):
@@ -59,6 +60,8 @@ class MQTTNotifier( Notifier ):
         sz = round( len( attachment ) / 1024, 2 )
         logger.debug( 'snapshot ({}kB) to {}...'.format( sz, topic ) )
         self.mqtt.publish( topic, attachment, retain=True )
+        self.mqtt.publish(
+            '{}/timestamp'.format( topic ), str( time.time() ), retain=True )
 
     def on_connected( self, client, userdata, flags, rc ):
         logger = logging.getLogger( 'mqtt.connected' )
