@@ -3,6 +3,7 @@ import cv2
 import logging
 import os
 import io
+import shutil
 from datetime import datetime
 from threading import Thread
 from ftplib import FTP
@@ -14,6 +15,8 @@ class Capture( object ):
     def __init__( self, **kwargs ):
 
         self.path = kwargs['path'] if 'path' in kwargs else '/tmp'
+        self.backup_path = \
+            kwargs['backuppath'] if 'backuppath' in kwargs else '/tmp'
         self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
             '%Y-%m-%d-%H-%M-%S-%f'
 
@@ -26,16 +29,18 @@ class Capture( object ):
 class VideoCapture( Capture ):
 
     class VideoCaptureWriter( Thread ):
-        def __init__( self, path, w, h, fps, timestamp, fourcc, container ):
+        def __init__( self, path, bkp, w, h, fps, ts, fourcc, container ):
             super().__init__()
 
             logger = logging.getLogger('capture.video.writer.init' )
 
-            logger.info( 'creating video writer for {}.mp4...'.format(
-                os.path.join( path, timestamp ) ) )
-
+            self.timestamp = ts
             self.path = path
-            self.timestamp = timestamp
+            self.backup_path = bkp
+
+            logger.debug( 'creating video writer for {}.mp4...'.format(
+                os.path.join( self.path, self.timestamp ) ) )
+
             self.frames = []
             self.w = w
             self.h = h
@@ -53,7 +58,6 @@ class VideoCapture( Capture ):
             logger.info( 'logging into ftp at {} as {}...'.format(
                 pr.hostname, pr.username ) )
             ftp = FTP( host=pr.hostname, user=pr.username, passwd=pr.password )
-            #ftp.login()
             ftp.cwd( pr.path )
 
             logger.info( 'uploading {}...'.format( filepath ) )
@@ -69,27 +73,37 @@ class VideoCapture( Capture ):
 
             temp_dir = TemporaryDirectory()
 
+            # Determine path for saved video/temporary video.
             filename = '{}.{}'.format( self.timestamp, self.container )
+            filepath = filename
             if self.path.startswith( 'ftp:' ):
-                filename = os.path.join( temp_dir.name, filename )
+                filepath = os.path.join( temp_dir.name, filename )
             else:
-                filename = os.path.join( self.path, filename )
+                filepath = os.path.join( self.path, filename )
 
             logger.info( 'encoding {} ({} frames, {} fps)...'.format(
-                filename, len( self.frames ), self.fps ) )
+                filepath, len( self.frames ), self.fps ) )
 
             # Encode the video file.
             fourcc = cv2.VideoWriter_fourcc( *(self.fourcc) )
             encoder = \
-                cv2.VideoWriter( filename, fourcc, self.fps, (self.w, self.h) )
+                cv2.VideoWriter( filepath, fourcc, self.fps, (self.w, self.h) )
             for frame in self.frames:
                 encoder.write( frame )
             encoder.release()
 
+            # Try to upload file if remote path specified.
             if self.path.startswith( 'ftp:' ):
-                self.upload_ftp( filename )
+                try:
+                    self.upload_ftp( filepath )
 
-            temp_dir.cleanup()
+                    temp_dir.cleanup()
+                except Exception as e:
+                    logger.error( 'ftp upload failure: {}'.format( e ) )
+                    backup_filepath = os.path.join( self.backup_path, filename )
+                    logger.info( 'moving {} to {}...'.format( 
+                        filepath, backup_filepath ) )
+                    shutil.move( filepath, backup_filepath )
 
             logger.info( 'encoding {} completed'.format( filename ) )
 
@@ -100,7 +114,6 @@ class VideoCapture( Capture ):
         logger.info( 'setting up video capture...' )
 
         self.grace_remaining = 0
-
         self.grace_frames = int( kwargs['graceframes'] ) \
             if 'graceframes' in kwargs else 0
         self.fps = float( kwargs['fps'] ) if 'fps' in kwargs else 15.0
@@ -113,8 +126,8 @@ class VideoCapture( Capture ):
         if None == self.encoder:
             timestamp = datetime.now().strftime( self.ts_format )
             self.encoder = self.VideoCaptureWriter(
-                self.path, w, h, self.fps, timestamp, self.fourcc,
-                self.container )
+                self.path, self.backup_path, w, h, self.fps,
+                timestamp, self.fourcc, self.container )
 
         self.encoder.frames.append( frame )
 
