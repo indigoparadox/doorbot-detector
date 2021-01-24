@@ -2,8 +2,12 @@
 import cv2
 import logging
 import os
+import io
 from datetime import datetime
 from threading import Thread
+from ftplib import FTP
+from tempfile import TemporaryDirectory
+from urllib.parse import urlparse
 
 class Capture( object ):
 
@@ -40,22 +44,52 @@ class VideoCapture( Capture ):
             self.container = container
             self.daemon = True
 
+        def upload_ftp( self, filepath  ):
+
+            logger = logging.getLogger( 'capture.video.writer.ftp' )
+
+            # Login and change to dest dir.
+            pr = urlparse( self.path )
+            logger.info( 'logging into ftp at {} as {}...'.format(
+                pr.hostname, pr.username ) )
+            ftp = FTP( host=pr.hostname, user=pr.username, passwd=pr.password )
+            #ftp.login()
+            ftp.cwd( pr.path )
+
+            logger.info( 'uploading {}...'.format( filepath ) )
+
+            # Upload the file.
+            with open( filepath, 'rb' ) as fp:
+                dest_filename = os.path.basename( filepath )
+                ftp.storbinary( 'STOR {}'.format( dest_filename ), fp )
+
         def run( self ):
 
             logger = logging.getLogger( 'capture.video.writer.run' )
 
-            filename = '{}/{}.{}'.format( self.path, self.timestamp,
-                self.container )
+            temp_dir = TemporaryDirectory()
+
+            filename = '{}.{}'.format( self.timestamp, self.container )
+            if self.path.startswith( 'ftp:' ):
+                filename = os.path.join( temp_dir.name, filename )
+            else:
+                filename = os.path.join( self.path, filename )
 
             logger.info( 'encoding {} ({} frames, {} fps)...'.format(
                 filename, len( self.frames ), self.fps ) )
 
+            # Encode the video file.
             fourcc = cv2.VideoWriter_fourcc( *(self.fourcc) )
             encoder = \
                 cv2.VideoWriter( filename, fourcc, self.fps, (self.w, self.h) )
             for frame in self.frames:
                 encoder.write( frame )
             encoder.release()
+
+            if self.path.startswith( 'ftp:' ):
+                self.upload_ftp( filename )
+
+            temp_dir.cleanup()
 
             logger.info( 'encoding {} completed'.format( filename ) )
 

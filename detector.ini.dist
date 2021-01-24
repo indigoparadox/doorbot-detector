@@ -66,6 +66,9 @@ host=
 port=8883
 ssl=true
 logger=false
+snapshots=true
 ca=
 topic=
 uid=
+snapsize=320,240
+
