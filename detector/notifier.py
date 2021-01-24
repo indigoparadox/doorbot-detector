@@ -29,7 +29,8 @@ class MQTTNotifier( Notifier ):
 
         self.snapshots = True if 'snapshots' in kwargs \
             and 'true' == kwargs['snapshots'] else False
-
+        self.snaps_retain = True if 'snapsretain' in kwargs \
+            and 'true' == kwargs['snapsretain'] else False
         self.topic = kwargs['topic']
         self.mqtt = mqtt_client.Client(
             kwargs['uid'], True, None, mqtt_client.MQTTv31 )
@@ -57,7 +58,7 @@ class MQTTNotifier( Notifier ):
         topic = '{}/{}'.format( self.topic, subject )
         sz = round( len( attachment ) / 1024, 2 )
         logger.debug( 'snapshot ({}kB) to {}...'.format( sz, topic ) )
-        self.mqtt.publish( topic, attachment )
+        self.mqtt.publish( topic, attachment, retain=True )
 
     def on_connected( self, client, userdata, flags, rc ):
         logger = logging.getLogger( 'mqtt.connected' )
