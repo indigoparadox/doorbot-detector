@@ -120,7 +120,8 @@ class SnapWindow( Frame ):
         logger.debug( 'snap received ({} kB)'.format( len( message.payload ) ) )
         image_raw = Image.open( io.BytesIO( message.payload ) )
         self.image_pil = image_raw.resize( self.snap_size )
-        self.draw_image( self.image_pil )
+        img = self.draw_overlay( self.image_pil.copy() )
+        self.draw_image( img )
 
     def on_ts_received( self, client, userdata, message ):
         msg_str = message.payload.decode( 'utf-8' )
