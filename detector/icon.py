@@ -1,6 +1,7 @@
 
 import threading
 import logging
+import os
 
 INTERFACE_GTK = 1
 INTERFACE_WIN32 = 2
@@ -17,12 +18,25 @@ try:
     interface = INTERFACE_GTK
 except Exception as e:
     logger.error( 'error importing gtk: {}'.format( e ) )
+    try:
+        from .notificationicon import NotificationIcon
+        interface = INTERFACE_WIN32
+    except Exception as e:
+        logger.error( 'error importing win32: {}'.format( e ) )
+        logger.error( 'no tray icon mechanism available' )
+
+
 
 class TrayMenu( object ):
     def __init__( self ):
         self.items = {}
-        if INTERFACE_GTK:
+        if interface == INTERFACE_GTK:
             self._menu = Gtk.Menu()
+
+        elif interface == INTERFACE_WIN32:
+            self._items = []
+            pass
+
         else:
             raise Exception( 'not implemented' )
 
@@ -44,21 +58,30 @@ class TrayMenu( object ):
                 'tried to set status of missing option item {}'.format( key ) )
 
     def add_item( self, key, label, callback, *args, **kwargs ):
-        if INTERFACE_GTK:
+        if interface == INTERFACE_GTK:
             self.items[key] = Gtk.MenuItem( label ) 
             self.items[key].connect( 'activate', callback, *args, **kwargs )
             self._menu.append( self.items[key] )
             self.items[key].show()
+
+        elif interface == INTERFACE_WIN32:
+            self._items.append( (label, callback) )
+
         else:
             raise Exception( 'not implemented' )
 
     def add_option_item( self, key, label, checked, callback, *args, **kwargs ):
-        if INTERFACE_GTK:
+        if interface == INTERFACE_GTK:
             self.items[key] = Gtk.CheckMenuItem( label ) 
             self.items[key].connect( 'activate', callback, *args, **kwargs )
             self._menu.append( self.items[key] )
             self.items[key].show()
             self.items[key].set_active( checked )
+
+        elif interface == INTERFACE_WIN32:
+            # TODO
+            pass
+
         else:
             raise Exception( 'not implemented' )
 
@@ -71,7 +94,7 @@ class TrayIcon( threading.Thread ):
 
         self.daemon = True
 
-        if INTERFACE_GTK:
+        if interface == INTERFACE_GTK:
             category = \
                 getattr( appindicator.IndicatorCategory, kwargs['category'] ) \
                 if 'category' in kwargs else \
@@ -85,6 +108,12 @@ class TrayIcon( threading.Thread ):
 
             if 'attention_icon' in kwargs:
                 self.icon.set_attention_icon( kwargs['attention_icon'] )
+
+        elif interface == INTERFACE_WIN32:
+            self.ni = NotificationIcon(
+                os.path.join( os.path.dirname( os.path.abspath( __file__ ) ),
+                '..\{}.ico'.format( icon ) ), iid )
+
         else:
             raise Exception( 'not implemented' )
 
@@ -92,10 +121,17 @@ class TrayIcon( threading.Thread ):
 
     def run( self ):
 
-        if INTERFACE_GTK:
+        if interface == INTERFACE_GTK:
             self.icon.set_menu( self.menu._menu )
 
             Gtk.main()
+
+        elif interface == INTERFACE_WIN32:
+            self.ni.items = self.menu._items
+            self.ni._run()
+            while True:
+                pass
+
         else:
             raise Exception( 'not implemented' )
 

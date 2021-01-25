@@ -65,8 +65,13 @@ class WeatherOverlay( OverlayHandler ):
         self.countdown = self.refresh
 
         # Update weather.
-        r = requests.get( self.url )
-        weather = r.json()
+        weather = None
+        try:
+            r = requests.get( self.url )
+            weather = r.json()
+        except Exception as e:
+            logger.error( 'unable to fetch weather: {}'.format( e ) )
+            return
 
         self.current = self.format
         current = weather['stats']['current']
