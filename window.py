@@ -9,6 +9,7 @@ from configparser import ConfigParser
 from tkinter import Tk, Frame, Label
 from PIL import ImageTk, Image, ImageDraw
 from detector.overlay import Overlays, WeatherOverlay, OverlayHandler
+from detector.icon import TrayIcon, TrayMenu
 from datetime import datetime
 
 class SnapWindow( Frame ):
@@ -18,14 +19,29 @@ class SnapWindow( Frame ):
         
         logger = logging.getLogger( 'window.init' )
 
+        #self.master = master
+
         self.snap_size = \
             tuple( [int( x ) for x in kwargs['snapsize'].split( ',' )] )
+
+        self.icon = kwargs['icon']
+        self.icon.menu.add_option_item( 
+            'autohide', 'Auto-Hide on Idle', False,
+            self.toggle_autohide )
+
+        self.autohide = True if 'winautohide' in kwargs and \
+            'true' == kwargs['winautohide'] else False
+        self.autohide_after = None
+        self.autohide_delay = int( kwargs['winautohidedelay'] ) if \
+            'winautohidedelay' in kwargs else 1000
 
         self.pack()
 
         self.timestamp_overlay = kwargs['timestamp_overlay']
 
         self.overlays = kwargs['overlays']
+        self.overlay_refresh_delay = int( kwargs['overlayrefreshdelay'] ) if \
+            'overlayrefreshdelay' in kwargs else 1000
         self.overlays.start()
 
         self.overlay = kwargs['winoverlay'] if 'winoverlay' in kwargs else \
@@ -59,6 +75,18 @@ class SnapWindow( Frame ):
         
         self.update_overlays()
 
+        if self.autohide:
+            logger.debug( 'autohide enabled' )
+            self.after( self.autohide_delay, self.hide_window )
+
+    @property
+    def autohide( self ):
+        return self.icon.menu.get_checked( 'autohide' )
+
+    @autohide.setter
+    def autohide( self, value ):
+        self.icon.menu.set_checked( 'autohide', value )
+
     def draw_overlay( self, img ):
 
         if not self.overlay:
@@ -88,10 +116,36 @@ class SnapWindow( Frame ):
 
         return img
 
+    def hide_window( self ):
+        logger = logging.getLogger( 'window.hide' )
+        logger.debug( 'hiding window...' )
+        self.master.withdraw()
+
+    def show_window( self ):
+        logger = logging.getLogger( 'window.hide' )
+        logger.debug( 'canceling hide' )
+        self.master.deiconify()
+
     def draw_image( self, image ):
+        
+        logger = logging.getLogger( 'window.image.draw' )
+
         image_tk = ImageTk.PhotoImage( image )
         self.image.configure( image=image_tk )
         self.image_tk = image_tk
+
+    def toggle_autohide( self, w ):
+        logger = logging.getLogger( 'window.icon' )
+        logger.debug( 'clicked' )
+
+        if not self.autohide and self.autohide_after:
+            self.after_cancel( self.autohide_after )
+            self.autohide_after = None
+            self.show_window()
+        elif self.autohide:
+            logger.debug( 'waiting 1 second to hide...' )
+            self.autohide_after = self.after(
+                self.autohide_delay, self.hide_window )
 
     def update_overlays( self ):
 
@@ -100,13 +154,13 @@ class SnapWindow( Frame ):
         if not self.overlay:
             return
 
-        logger.debug( 'updating...' )
+        #logger.debug( 'updating...' )
 
         img = self.draw_overlay( self.image_pil.copy() )
 
         self.draw_image( img )
 
-        self.after( 1000, self.update_overlays )
+        self.after( self.overlay_refresh_delay, self.update_overlays )
 
     def on_connected( self, client, userdata, flags, rc ):
         logger = logging.getLogger( 'window.connected' )
@@ -117,11 +171,25 @@ class SnapWindow( Frame ):
 
     def on_snap_received( self, client, userdata, message ):
         logger = logging.getLogger( 'window.received' )
+
+        if self.autohide and self.autohide_after:
+            logger.debug( 'canceling hide' )
+            self.after_cancel( self.autohide_after )
+            self.autohide_after = None
+
+        # Show the window no matter what.
+        self.show_window()
+
         logger.debug( 'snap received ({} kB)'.format( len( message.payload ) ) )
         image_raw = Image.open( io.BytesIO( message.payload ) )
         self.image_pil = image_raw.resize( self.snap_size )
         img = self.draw_overlay( self.image_pil.copy() )
         self.draw_image( img )
+
+        if self.autohide:
+            logger.debug( 'waiting 1 second to hide...' )
+            self.autohide_after = self.after(
+                self.autohide_delay, self.hide_window )
 
     def on_ts_received( self, client, userdata, message ):
         msg_str = message.payload.decode( 'utf-8' )
@@ -135,6 +203,10 @@ class SnapWindow( Frame ):
         logger.info( 'mqtt shutting down...' )
         self.mqtt.disconnect()
         self.mqtt.loop_stop()
+
+    def mainloop( self ):
+        super().mainloop()
+
 
 class TimestampOverlay( OverlayHandler ):
 
@@ -156,6 +228,7 @@ def main():
     if args.verbose:
         level = logging.DEBUG
     logging.basicConfig( level=level )
+    logging.getLogger( 'PIL.PngImagePlugin' ).setLevel( logging.WARNING )
     logger = logging.getLogger( 'main' )
     
     config = ConfigParser()
@@ -176,11 +249,17 @@ def main():
     tso = TimestampOverlay()
     overlay_thread.overlays.append( tso )
 
+    tray_menu = TrayMenu()
+    tray_icon = \
+        TrayIcon( 'detector-window-icon', 'camera-web', tray_menu )
+
     win_cfg = dict( config.items( 'mqtt' ) )
     win_cfg['overlays'] = overlay_thread
     win_cfg['timestamp_overlay'] = tso
+    win_cfg['icon'] = tray_icon
 
     win = SnapWindow( root, **win_cfg )
+    tray_icon.start()
 
     win.mainloop()
 
