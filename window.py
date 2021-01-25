@@ -28,6 +28,7 @@ class SnapWindow( Frame ):
         self.icon.menu.add_option_item( 
             'autohide', 'Auto-Hide on Idle', False,
             self.toggle_autohide )
+        self.icon.menu.add_item( 'exit', 'Exit', self.stop )
 
         self.autohide = True if 'winautohide' in kwargs and \
             'true' == kwargs['winautohide'] else False
@@ -198,15 +199,15 @@ class SnapWindow( Frame ):
             'updated {}'.format( ts.strftime( '%I:%M:%S %p %m/%d/%Y' ) )
         logger.debug( 'timestamp: {}'.format( self.timestamp_overlay.current ) )
 
-    def stop( self ):
+    def stop( self, w=None ):
         logger = logging.getLogger( 'window.stop' )
         logger.info( 'mqtt shutting down...' )
         self.mqtt.disconnect()
         self.mqtt.loop_stop()
+        self.master.destroy()
 
     def mainloop( self ):
         super().mainloop()
-
 
 class TimestampOverlay( OverlayHandler ):
 

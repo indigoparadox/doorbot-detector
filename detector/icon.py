@@ -43,7 +43,7 @@ class TrayMenu( object ):
             logger.warning(
                 'tried to set status of missing option item {}'.format( key ) )
 
-    def add_item( self, label, key, callback, *args, **kwargs ):
+    def add_item( self, key, label, callback, *args, **kwargs ):
         if INTERFACE_GTK:
             self.items[key] = Gtk.MenuItem( label ) 
             self.items[key].connect( 'activate', callback, *args, **kwargs )
