@@ -180,6 +180,7 @@ class TrayIcon( threading.Thread ):
 
         logger = logging.getLogger( 'icon.stop' )
     
-        logger.debug( 'cleaning up tray icon...' )
-        self.ni.die()
+        if interface == INTERFACE_WIN32:
+            logger.debug( 'cleaning up tray icon...' )
+            self.ni.die()
 
