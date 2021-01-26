@@ -582,11 +582,13 @@ class NotificationIcon(object):
 
         menu = CreatePopupMenu()
         func = None
+        key = None
 
         try:
             iidx = 1000
             defaultitem = -1
             item_map = {}
+            item_args = {}
             for fs in self.items:
                 iidx += 1
                 if isinstance(fs, str):
@@ -596,7 +598,8 @@ class NotificationIcon(object):
                         AppendMenu(menu, MF_STRING | MF_GRAYED, iidx, fs)
                 elif isinstance(fs, tuple):
                     if callable(fs[0]):
-                        itemstring = fs[0]()
+                        args = fs[2:]
+                        itemstring = fs[0](*args)
                     else:
                         itemstring = fs[0]
                     flags = MF_STRING
@@ -608,6 +611,7 @@ class NotificationIcon(object):
                         flags = flags | MF_CHECKED
                     itemcallable = fs[1]
                     item_map[iidx] = itemcallable
+                    item_args[iidx] = fs[2:]
                     if itemcallable is False:
                         flags = flags | MF_DISABLED
                     elif not callable(itemcallable):
@@ -628,11 +632,12 @@ class NotificationIcon(object):
 
             if ti in item_map:
                 func = item_map[ti]
+                args = item_args[ti]
 
             PostMessage(self._hwnd, WM_NULL, 0, 0)
         finally:
             DestroyMenu(menu)
-        if func: func()
+        if func: func(*args)
 
 
     def clicked(self):

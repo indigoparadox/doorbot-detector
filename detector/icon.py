@@ -29,21 +29,26 @@ except Exception as e:
 
 class TrayMenu( object ):
     def __init__( self ):
-        self.items = {}
+        self._items = {}
         if interface == INTERFACE_GTK:
             self._menu = Gtk.Menu()
 
         elif interface == INTERFACE_WIN32:
-            self._items = []
-            pass
+            self._meta = {}
 
         else:
             raise Exception( 'not implemented' )
 
     def get_checked( self, key ):
         logger = logging.getLogger( 'icon.menu.checked' )
-        if key in self.items:
-            return self.items[key].get_active()
+        if key in self._items:
+            if interface == INTERFACE_GTK:
+                return self._items[key].get_active()
+            elif interface == INTERFACE_WIN32:
+                #return self._items[key][0].startswith( '+' )
+                return self._meta[key]['checked']
+            else:
+                raise Exception( 'not implemented' )
         else:
             logger.warning(
                 'tried to get status of missing option item {}'.format( key ) )
@@ -51,39 +56,72 @@ class TrayMenu( object ):
 
     def set_checked( self, key, value ):
         logger = logging.getLogger( 'icon.menu.checked' )
-        if key in self.items:
-            self.items[key].set_active( value )
+        if key in self._items:
+            if interface == INTERFACE_GTK:
+                self._items[key].set_active( value )
+            elif interface == INTERFACE_WIN32:
+                #if self._items[key][0].startswith( '+' ) and not value:
+                #    self._items[key] = \
+                #        (self._items[key][0][1:], self._items[key][1])
+                #elif value and not self._items[key][0].startswith( '+' ):
+                #    self._items[key] = \
+                #        ('+' + self._items[key][0], self._items[key][1])
+                self._meta[key]['checked'] = value
+            else:
+                raise Exception( 'not implemented' )
         else:
             logger.warning(
                 'tried to set status of missing option item {}'.format( key ) )
 
     def add_item( self, key, label, callback, *args, **kwargs ):
         if interface == INTERFACE_GTK:
-            self.items[key] = Gtk.MenuItem( label ) 
-            self.items[key].connect( 'activate', callback, *args, **kwargs )
-            self._menu.append( self.items[key] )
-            self.items[key].show()
+            self._items[key] = Gtk.MenuItem( label ) 
+            self._items[key].connect( 'activate', callback, *args, **kwargs )
+            self._menu.append( self._items[key] )
+            self._items[key].show()
 
         elif interface == INTERFACE_WIN32:
-            self._items.append( (label, callback) )
+            self._items[key] = (label, callback, key, *args)
+            self._meta[key] = {}
 
         else:
             raise Exception( 'not implemented' )
 
     def add_option_item( self, key, label, checked, callback, *args, **kwargs ):
         if interface == INTERFACE_GTK:
-            self.items[key] = Gtk.CheckMenuItem( label ) 
-            self.items[key].connect( 'activate', callback, *args, **kwargs )
-            self._menu.append( self.items[key] )
-            self.items[key].show()
-            self.items[key].set_active( checked )
+            self._items[key] = Gtk.CheckMenuItem( label ) 
+            self._items[key].connect( 'activate', callback, *args, **kwargs )
+            self._menu.append( self._items[key] )
+            self._items[key].show()
+            self._items[key].set_active( checked )
 
         elif interface == INTERFACE_WIN32:
-            # TODO
-            pass
+            self._items[key] = (self._title_checked_win32, self._click_checked_win32, key, callback, *args)
+            self._meta[key] = {'checked': checked, 'label': label}
 
         else:
             raise Exception( 'not implemented' )
+
+    def _click_checked_win32( self, *args ):
+        key = args[0]
+
+        # Toggle check.
+        if self._meta[key]['checked']:
+            self._meta[key]['checked'] = False
+        else:
+            self._meta[key]['checked'] = True
+
+        cb_args = args[2:]
+        if args[1]:
+            print( args )
+            args[1]( *cb_args )
+
+    def _title_checked_win32( self, *args ):
+        key = args[0]
+        if self._meta[key]['checked']:
+            return '+' + self._meta[key]['label']
+        else:
+            return self._meta[key]['label']
 
 class TrayIcon( threading.Thread ):
 
@@ -121,17 +159,27 @@ class TrayIcon( threading.Thread ):
 
     def run( self ):
 
+        logger = logging.getLogger( 'icon.run' )
+
         if interface == INTERFACE_GTK:
             self.icon.set_menu( self.menu._menu )
 
             Gtk.main()
 
         elif interface == INTERFACE_WIN32:
-            self.ni.items = self.menu._items
+            self.ni.items = self.menu._items.values()
             self.ni._run()
+
             while True:
                 pass
 
         else:
             raise Exception( 'not implemented' )
+
+    def stop( self ):
+
+        logger = logging.getLogger( 'icon.stop' )
+    
+        logger.debug( 'cleaning up tray icon...' )
+        self.ni.die()
 

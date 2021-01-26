@@ -135,7 +135,7 @@ class SnapWindow( Frame ):
         self.image.configure( image=image_tk )
         self.image_tk = image_tk
 
-    def toggle_autohide( self, w ):
+    def toggle_autohide( self, *args, **kwargs ):
         logger = logging.getLogger( 'window.icon' )
         logger.debug( 'clicked' )
 
@@ -199,12 +199,16 @@ class SnapWindow( Frame ):
             'updated {}'.format( ts.strftime( '%I:%M:%S %p %m/%d/%Y' ) )
         logger.debug( 'timestamp: {}'.format( self.timestamp_overlay.current ) )
 
-    def stop( self, w=None ):
+    def stop( self, *args, **kwargs ):
         logger = logging.getLogger( 'window.stop' )
         logger.info( 'mqtt shutting down...' )
         self.mqtt.disconnect()
         self.mqtt.loop_stop()
-        self.master.destroy()
+        self.icon.stop()
+        try:
+            self.master.destroy()
+        except Exception as e:
+            logger.error( 'error stopping tk: {}'.format( e ) )
 
     def mainloop( self ):
         super().mainloop()
@@ -215,9 +219,12 @@ class TimestampOverlay( OverlayHandler ):
         super().__init__( **kwargs )
         self.token = '<timestamp>'
 
+win = None
+
 def main():
 
     global logger
+    global win
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -264,9 +271,12 @@ def main():
 
     win.mainloop()
 
+    win.stop()
+
 if '__main__' == __name__:
     try:
         main()
     except KeyboardInterrupt as e:
         logger.info( 'quitting on ctrl-c' )
+        win.stop()
 
