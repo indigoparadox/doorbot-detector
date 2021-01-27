@@ -91,7 +91,7 @@ class SnapWindow( Frame ):
     def draw_overlay( self, img ):
 
         if not self.overlay:
-            return
+            return img
 
         text = self.overlay.split( "\\n" )
         org = self.overlay_coords

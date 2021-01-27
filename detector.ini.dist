@@ -73,4 +73,9 @@ ca=
 topic=
 uid=
 snapsize=320,240
+winoverlay=<timestamp>\n<weather>
+winoverlaycoords=10, 10
+winautohide=false
+winautohidedelay=2000
+overlayrefreshdelay=3000
 
