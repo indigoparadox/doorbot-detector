@@ -19,25 +19,30 @@ class SnapWindow( Frame ):
         
         logger = logging.getLogger( 'window.init' )
 
-        #self.master = master
-
         self.snap_size = \
             tuple( [int( x ) for x in kwargs['snapsize'].split( ',' )] )
 
+        # Setup tray icon.
         self.icon = kwargs['icon']
         self.icon.menu.add_option_item( 
             'autohide', 'Auto-Hide on Idle', False,
             self.toggle_autohide )
         self.icon.menu.add_item( 'exit', 'Exit', self.stop )
 
+        # Setup autohide.
+        self.autohide_delay = int( kwargs['winautohidedelay'] ) if \
+            'winautohidedelay' in kwargs else 1000
         self.autohide = True if 'winautohide' in kwargs and \
             'true' == kwargs['winautohide'] else False
         self.autohide_after = None
-        self.autohide_delay = int( kwargs['winautohidedelay'] ) if \
-            'winautohidedelay' in kwargs else 1000
+
+        # Setup always-on-top.
+        self.always_on_top = False if 'winalwaysontop' in kwargs and \
+            'true' != kwargs['winalwaysontop'] else True
 
         self.pack()
 
+        # Setup overlays.
         self.timestamp_overlay = kwargs['timestamp_overlay']
 
         self.overlays = kwargs['overlays']
@@ -52,12 +57,14 @@ class SnapWindow( Frame ):
                 kwargs['winoverlaycoords'].split( ',' )] ) \
             if 'winoverlaycoords' in kwargs else (0, 0)
 
+        # Setup image drawing area.
         self.image = Label( self )
         self.image.pack( fill="both", expand="yes" )
         
         self.image_pil = Image.new( 'RGB', self.snap_size )
         self.draw_image( self.image_pil )
 
+        # Setup MQTT.
         self.mqtt = mqtt_client.Client(
             'window-{}'.format( kwargs['uid'] ),
             True, None, mqtt_client.MQTTv31 )
@@ -87,6 +94,10 @@ class SnapWindow( Frame ):
     @autohide.setter
     def autohide( self, value ):
         self.icon.menu.set_checked( 'autohide', value )
+
+    def get_attention( self ):
+        if self.always_on_top:
+            self.master.attributes( '-topmost', True )
 
     def draw_overlay( self, img ):
 
@@ -181,6 +192,8 @@ class SnapWindow( Frame ):
         # Show the window no matter what.
         self.show_window()
 
+        self.get_attention()
+
         logger.debug( 'snap received ({} kB)'.format( len( message.payload ) ) )
         image_raw = Image.open( io.BytesIO( message.payload ) )
         self.image_pil = image_raw.resize( self.snap_size )
@@ -244,7 +257,6 @@ def main():
 
     root = Tk()
     root.title( 'Camera Activity' )
-    root.attributes( '-topmost', True )
 
     overlay_thread = Overlays()
 
