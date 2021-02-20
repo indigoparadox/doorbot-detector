@@ -1,10 +1,9 @@
 
 import threading
 import logging
-import requests
-import json
 import time
 import html
+import requests
 
 class Overlays( threading.Thread ):
 
@@ -67,10 +66,10 @@ class WeatherOverlay( OverlayHandler ):
         # Update weather.
         weather = None
         try:
-            r = requests.get( self.url )
-            weather = r.json()
+            req = requests.get( self.url )
+            weather = req.json()
         except Exception as e:
-            logger.error( 'unable to fetch weather: {}'.format( e ) )
+            logger.error( 'unable to fetch weather: %s', e )
             return
 
         self.current = self.format
@@ -79,4 +78,3 @@ class WeatherOverlay( OverlayHandler ):
             self.current = self.current.replace(
                 '<{}>'.format( token ),
                 html.unescape( current[token] ) )
-

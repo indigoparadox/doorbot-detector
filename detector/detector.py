@@ -1,9 +1,8 @@
 
-import cv2
-import numpy
 import logging
-import time
 import threading
+import numpy
+import cv2
 from .util import FPSTimer, FrameLock
 
 CAPTURE_NONE = 0
@@ -23,6 +22,7 @@ class Detector( threading.Thread ):
         self._frame_processed = True
         self.daemon = True
         self.running = True
+        self.cam = None
 
         self.timer = FPSTimer( self, **kwargs )
 
@@ -34,8 +34,6 @@ class Detector( threading.Thread ):
         raise Exception( 'not implemented!' )
 
     def run( self ):
-
-        wait_count = 0
 
         logger = logging.getLogger( 'detector.run' )
 
@@ -53,8 +51,8 @@ class Detector( threading.Thread ):
             logger.debug( 'processing frame...' )
 
             frame = None
-            with self._frame.get_frame() as fm:
-                frame = fm.copy()
+            with self._frame.get_frame() as orig_frame:
+                frame = orig_frame.copy()
 
             self.detect( frame )
 
@@ -74,8 +72,8 @@ class MotionDetector( Detector ):
         self.min_h = int( kwargs['minh'] ) if 'minh' in kwargs else 0
         self.ignore_edges = True if 'ignoreedges' in kwargs and \
             'true' == kwargs['ignoreedges'] else False
-        logger.debug( 'minimum movement size: {}x{}, ignore edges: {}'.format(
-            self.min_w, self.min_h, self.ignore_edges ) )
+        logger.debug( 'minimum movement size: %dx%d, ignore edges: %d',
+            self.min_w, self.min_h, self.ignore_edges )
         self.wait_max = int( kwargs['waitmax'] ) \
             if 'waitmax' in kwargs else 5
         self.running = True
@@ -91,12 +89,10 @@ class MotionDetector( Detector ):
 
         self.kernel = numpy.ones( (20, 20), numpy.uint8 )
 
-        logger.debug( 'threshold: {}'.format( self.threshold ) )
-        logger.debug( 'blur: {}'.format( self.blur ) )
+        logger.debug( 'threshold: %d', self.threshold )
+        logger.debug( 'blur: %d', self.blur )
 
     def detect( self, frame ):
-
-        logger = logging.getLogger( 'detector.motion.detect' )
 
         # Convert to foreground mask, close gaps, remove noise.
         fg_mask = self.back_sub.apply( frame )
@@ -108,7 +104,7 @@ class MotionDetector( Detector ):
             fg_mask, self.threshold, 255, cv2.THRESH_BINARY )
 
         # Find object contours/areas.
-        contours, hierarchy = cv2.findContours( 
+        contours, hierarchy = cv2.findContours(
             fg_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )[-2:]
         areas = [cv2.contourArea(c) for c in contours]
 
@@ -122,28 +118,28 @@ class MotionDetector( Detector ):
             max_idx = numpy.argmax( areas )
 
             cnt_iter = contours[max_idx]
-            x, y, w, h = cv2.boundingRect( cnt_iter )
-            
-            if self.min_w > w or self.min_h > h:
+            rect_x, rect_y, rect_w, rect_h = cv2.boundingRect( cnt_iter )
+
+            if self.min_w > rect_w or self.min_h > rect_h:
                 # Filter out small movements.
                 #self.cam.notify( 'ignored', 'small {}x{} at {}, {}'.format(
                 #    w, h, x, y ) )
                 pass
 
             elif self.ignore_edges and \
-            (0 == w or \
-            0 == h or \
-            x + w >= self.cam.w or \
-            y + h >= self.cam.h):
+            (0 == rect_w or \
+            0 == rect_h or \
+            rect_x + rect_w >= self.cam.w or \
+            rect_y + rect_h >= self.cam.h):
                 # Filter out edge movements.
                 self.cam.notify( 'ignored', 'edge {}x{} at {}, {}'.format(
-                    w, h, x, y ) )
+                    rect_w, rect_h, rect_x, rect_y ) )
 
             else:
                 # Process a valid movement.
 
                 for capturer in self.cam.capturers:
-                    capturer.append_motion( frame, self.cam.w, self.cam.h )
+                    capturer.handle_motion_frame( frame, self.cam.w, self.cam.h )
 
                 # TODO: Vary color based on type of object.
                 # TODO: Send notifier w/ summary of current objects.
@@ -151,15 +147,16 @@ class MotionDetector( Detector ):
                 # TODO: Send image data.
                 ret, jpg = cv2.imencode( '.jpg', frame )
                 self.cam.notify( 'movement', '{}x{} at {}, {}'.format(
-                    w, h, x, y ), snapshot=jpg.tostring() )
+                    rect_w, rect_h, rect_x, rect_y ), snapshot=jpg.tostring() )
 
                 color = (255, 0, 0)
                 self.cam.overlays.highlights['motion']['boxes'].append( {
-                    'x1': x, 'y1': y, 'x2': x + w, 'y2': y + h, 'color': color
+                    'x1': rect_x, 'y1': rect_y,
+                    'x2': rect_x + rect_w, 'y2': rect_y + rect_h,
+                    'color': color
                 } )
 
         else:
             # No motion frames were found, digest capture pipeline.
             for capturer in self.cam.capturers:
-                capturer.process_motion( frame, self.cam.w, self.cam.h )
-
+                capturer.finalize_motion( frame, self.cam.w, self.cam.h )

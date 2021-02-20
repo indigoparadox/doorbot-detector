@@ -25,8 +25,6 @@ except Exception as e:
         logger.error( 'error importing win32: {}'.format( e ) )
         logger.error( 'no tray icon mechanism available' )
 
-
-
 class TrayMenu( object ):
     def __init__( self ):
         self._items = {}

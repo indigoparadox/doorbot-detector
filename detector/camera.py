@@ -1,8 +1,7 @@
 
 import logging
-import cv2
-import time
 import threading
+import cv2
 from .util import FPSTimer
 
 class Camera( threading.Thread ):
@@ -12,7 +11,7 @@ class Camera( threading.Thread ):
 
     def __init__( self, **kwargs ):
         super().__init__()
-        
+
         logger = logging.getLogger( 'camera.init' )
 
         logger.debug( 'setting up camera...' )
@@ -49,11 +48,11 @@ class Camera( threading.Thread ):
     def process( self, frame ):
         logger = logging.getLogger( 'camera.process' )
         for thd in self.detector_threads:
-            logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
+            logger.debug( 'setting frame for %s...', type( thd ) )
             thd.set_frame( frame )
 
         for thd in self.observer_threads:
-            logger.debug( 'setting frame for {}...'.format( type( thd ) ) )
+            logger.debug( 'setting frame for %s...', type( thd ) )
             thd.set_frame( frame )
 
 class IPCamera( Camera ):
@@ -67,9 +66,9 @@ class IPCamera( Camera ):
         super().__init__( **kwargs )
 
     def run( self ):
-        
+
         logger = logging.getLogger( 'camera.ip.run' )
-        
+
         logger.debug( 'starting camera loop...' )
 
         while self.running:
@@ -78,11 +77,11 @@ class IPCamera( Camera ):
             if self._stream.isOpened() and 0 >= self.w:
                 self.w = \
                     int( self._stream.get( cv2.CAP_PROP_FRAME_WIDTH ) )
-                logger.info( 'video is {} wide'.format( self.w ) )
+                logger.info( 'video is %d wide', self.w )
             if self._stream.isOpened() and 0 >= self.h:
                 self.h = \
                     int( self._stream.get( cv2.CAP_PROP_FRAME_HEIGHT ) )
-                logger.info( 'video is {} high'.format( self.h ) )
+                logger.info( 'video is %d high', self.h )
 
             ret, frame = self._stream.read()
 
@@ -90,8 +89,7 @@ class IPCamera( Camera ):
                 logger.error( 'camera disconnected!' )
                 self._stream.release()
                 self.attempts += 1
-                logger.info( 'reconnecting (attempt {})'.format(
-                    self.attempts ) )
+                logger.info( 'reconnecting (attempt %d)', self.attempts )
                 self._stream.open( self.cam_url )
                 continue
 
@@ -100,4 +98,3 @@ class IPCamera( Camera ):
             self.process( frame )
 
             self.timer.loop_timer_end()
-

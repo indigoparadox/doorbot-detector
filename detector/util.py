@@ -28,10 +28,10 @@ class FPSTimer( object ):
             sleep_delay = self._fps_target_delta - fps_actual_delta
             time.sleep( sleep_delay )
         else:
-            logger.warn(
-                '{} took too long! {} seconds vs target {} (thread {})'.format(
+            logger.warning(
+                '%s took too long! %d seconds vs target %d (thread %d)',
                     type( self.parent ), fps_actual_delta,
-                    self._fps_target_delta, threading.get_ident() ) )
+                    self._fps_target_delta, threading.get_ident() )
 
         # Store duration in local loop data list, creating it if not existant
         # for this thread.
@@ -48,9 +48,9 @@ class FPSTimer( object ):
             avg_work = sum( x[0] for x in self._loop_info.durations ) / \
                 len( self._loop_info.durations )
 
-            logger.debug( '{} fps: {} (thread {})'.format(
+            logger.debug( '%s fps: %d (thread %d)',
                 type( self.parent ), 1.0 / (avg_sleep + avg_work),
-                threading.get_ident() ) )
+                threading.get_ident() )
             self._loop_info.durations = []
 
 class RWLock( object ):
@@ -81,32 +81,32 @@ class RWLock( object ):
         logger = logging.getLogger( 'framelock.write' )
         self._ready.acquire()
         while 0 < self._readers:
-            logger.debug( 'waiting for write ({} readers, thread {})...'.format(
-                self._readers, threading.get_ident() ) )
+            logger.debug( 'waiting for write (%d readers, thread %d)...',
+                self._readers, threading.get_ident() )
             self._ready.wait()
-        logger.debug( 'locking frame for write (thread {})...'.format(
-            threading.get_ident() ) )
+        logger.debug( 'locking frame for write (thread %d)...',
+            threading.get_ident() )
         try:
             self._wrapped_abstraction = frame
         except Exception as e:
             logger.warning( e )
-        logger.debug( 'releasing write lock (thread {})'.format(
-            threading.get_ident() ) )
+        logger.debug( 'releasing write lock (thread %d)',
+            threading.get_ident() )
         self._ready.release()
 
     @contextmanager
     def get_frame( self ):
         logger = logging.getLogger( 'framelock.read' )
-        logger.debug( 'locking frame for read (thread {})...'.format(
-            threading.get_ident() ) )
+        logger.debug( 'locking frame for read (thread %d)...',
+            threading.get_ident() )
         self._ready.acquire()
         try:
             self._readers += 1
         finally:
             self._ready.release()
         yield self._wrapped_abstraction
-        logger.debug( 'releasing read lock (thread {})'.format(
-            threading.get_ident() ) )
+        logger.debug( 'releasing read lock (thread %d)',
+            threading.get_ident() )
         self._ready.acquire()
         try:
             self._readers -= 1
@@ -136,4 +136,3 @@ class FrameLock( RWLock ):
 
         self._wrapped_item = value.copy()
         self.frame_ready = True
-

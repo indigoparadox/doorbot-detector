@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
-import os
 import logging
-import threading
 import argparse
+from configparser import ConfigParser
 from detector.notifier import MQTTNotifier, LoggerNotifier
 from detector.capture import VideoCapture, PhotoCapture
 from detector.observer import ReserverThread, FramebufferThread
 from detector.detector import MotionDetector
 from detector.camera import IPCamera
 from detector.overlay import Overlays, WeatherOverlay
-from configparser import ConfigParser
 
 def load_module_config( config, key ):
     out_cfg = {}
@@ -29,7 +27,7 @@ logger = None
 def main():
 
     global logger
-    
+
     parser = argparse.ArgumentParser()
 
     verbosity_grp = parser.add_mutually_exclusive_group()
@@ -76,13 +74,13 @@ def main():
     vcap_cfg = load_module_config( config, 'videocap' )
     if None != vcap_cfg:
         capturers.append( VideoCapture( **vcap_cfg ) )
-        
+
     pcap_cfg = load_module_config( config, 'photocap' )
     if None != pcap_cfg:
         capturers.append( PhotoCapture( **pcap_cfg ) )
 
     # Setup the detector and observer satellite threads.
-    
+
     observer_threads = []
 
     fb_cfg = load_module_config( config, 'framebuffer' )
@@ -103,7 +101,7 @@ def main():
     weather_cfg = load_module_config( config, 'weather' )
     if None != weather_cfg:
         overlay_thread.overlays.append( WeatherOverlay( **weather_cfg ) )
-    
+
     # Setup the camera, the star of the show.
 
     cam_cfg = dict( config.items( 'stream' ) )
@@ -122,4 +120,3 @@ if '__main__' == __name__:
         main()
     except KeyboardInterrupt as e:
         logger.info( 'quitting on ctrl-c' )
-

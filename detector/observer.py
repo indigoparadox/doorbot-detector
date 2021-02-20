@@ -1,12 +1,13 @@
 
 import logging
-import time
-import cv2
 import threading
 from socketserver import ThreadingMixIn
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from .util import FPSTimer, FrameLock
 from contextlib import contextmanager
+
+import cv2
+
+from .util import FPSTimer, FrameLock
 
 class ObserverThread( threading.Thread ):
 
@@ -19,6 +20,7 @@ class ObserverThread( threading.Thread ):
         self._frame = FrameLock()
         self.timer = FPSTimer( self, **kwargs )
         self.running = True
+        self.cam = None
 
         # Overlay options. These are mostly OpenCV-specific, hence them being
         # here in the observer.
@@ -45,13 +47,13 @@ class ObserverThread( threading.Thread ):
         processing, so they should call this on the frame just before displaying
         it. '''
 
-        for hl in self.highlights:
-            if hl in self.cam.overlays.highlights and \
-            'boxes' in self.cam.overlays.highlights[hl]:
-                for bx in self.cam.overlays.highlights[hl]['boxes']:
+        for highlight in self.highlights:
+            if highlight in self.cam.overlays.highlights and \
+            'boxes' in self.cam.overlays.highlights[highlight]:
+                for box in self.cam.overlays.highlights[highlight]['boxes']:
                     cv2.rectangle( frame,
-                        (bx['x1'], bx['y1']),
-                        (bx['x2'], bx['y2']), bx['color'], 3 )
+                        (box['x1'], box['y1']),
+                        (box['x2'], box['y2']), box['color'], 3 )
 
         if not self.overlay:
             return
@@ -73,7 +75,7 @@ class FramebufferThread( ObserverThread ):
         logger = logging.getLogger( 'observer.framebuffer.init' )
 
         logger.debug( 'setting up framebuffer...' )
-        
+
         super().__init__( **kwargs )
 
         self.path = kwargs['path'] if 'path' in kwargs else '/dev/fb0'
@@ -86,17 +88,16 @@ class FramebufferThread( ObserverThread ):
 
         while self.running:
             self.timer.loop_timer_start()
-            
+
             if not self._frame.frame_ready:
                 logger.debug( 'waiting for frame...' )
                 self.timer.loop_timer_end()
                 continue
 
-            with open( self.path, 'rb+' ) as fb:
-                #try:
+            with open( self.path, 'rb+' ) as framebuffer:
                 frame = None
-                with self._frame.get_frame() as fm:
-                    frame = fm.copy()
+                with self._frame.get_frame() as orig_frame:
+                    frame = orig_frame.copy()
 
                 # Process the image for the framebuffer.
                 frame = cv2.cvtColor( frame, cv2.COLOR_BGR2BGRA )
@@ -106,9 +107,7 @@ class FramebufferThread( ObserverThread ):
 
                 self.draw_overlay( frame )
 
-                fb.write( frame )
-                #except Exception as e:
-                #    logger.warn( e )
+                framebuffer.write( frame )
 
             self.timer.loop_timer_end()
 
@@ -118,14 +117,14 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
         logger = logging.getLogger( 'reserver.get' )
 
-        logger.debug( 'connection from {}...'.format( self.address_string() ) )
+        logger.debug( 'connection from %s...', self.address_string() )
 
         if self.path.endswith( '.jpg' ):
             return self.serve_jpeg()
         else:
             return self.serve_mjpeg()
 
-    def log_message(self, format, *args):
+    def log_message( self, format, *args ):
         return
 
     def serve_jpeg( self ):
@@ -142,8 +141,8 @@ class ReserverHandler( BaseHTTPRequestHandler ):
         self.end_headers()
 
         frame = None
-        with self.server.thread._frame.get_frame() as fm:
-            frame = fm.copy()
+        with self.server.thread._frame.get_frame() as orig_frame:
+            frame = orig_frame.copy()
 
         self.server.thread.draw_overlay( frame )
 
@@ -165,8 +164,8 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
         client_addr = self.client_address[0]
 
-        logger.info( 'serving stream to client {} (thread {})'.format(
-            client_addr, threading.get_ident() ) )
+        logger.info( 'serving stream to client %s (thread %d)',
+            client_addr, threading.get_ident() )
 
         while self.server.thread.running:
             self.server.thread.timer.loop_timer_start()
@@ -178,8 +177,8 @@ class ReserverHandler( BaseHTTPRequestHandler ):
                 continue
 
             frame = None
-            with self.server.thread._frame.get_frame() as fm:
-                frame = fm.copy()
+            with self.server.thread._frame.get_frame() as orig_frame:
+                frame = orig_frame.copy()
 
             self.server.thread.draw_overlay( frame )
 
@@ -191,11 +190,11 @@ class ReserverHandler( BaseHTTPRequestHandler ):
                 self.end_headers()
                 self.wfile.write( jpg.tostring() )
                 self.server.thread.timer.loop_timer_end()
-            except BrokenPipeError as e:
-                logger.info( 'client {} disconnected (thread {})'.format(
-                    client_addr, threading.get_ident() ) )
+            except BrokenPipeError:
+                logger.info( 'client %s disconnected (thread %d)',
+                    client_addr, threading.get_ident() )
                 return
-        
+
 class Reserver( ThreadingMixIn, HTTPServer ):
 
     ''' This serves an mjpeg stream with what the detector sees. '''
@@ -214,16 +213,15 @@ class ReserverThread( ObserverThread ):
         logger = logging.getLogger( 'observer.reserver.init' )
 
         logger.debug( 'setting up reserver...' )
-        
+
         super().__init__( **kwargs )
         hostname = kwargs['listen'] if 'listen' in kwargs else '0.0.0.0'
         port = int( kwargs['port'] ) if 'port' in kwargs else 8888
         self.server = Reserver( self, (hostname, port), ReserverHandler )
 
     def run( self ):
-        
+
         logger = logging.getLogger( 'reserver.run' )
         logger.debug( 'starting reserver...' )
 
         self.server.serve_forever()
-
