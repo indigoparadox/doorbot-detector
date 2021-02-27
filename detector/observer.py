@@ -5,7 +5,10 @@ from socketserver import ThreadingMixIn
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from contextlib import contextmanager
 
-import cv2
+try:
+    from cv2 import cv2
+except ImportError:
+    import cv2
 
 from .util import FPSTimer, FrameLock
 

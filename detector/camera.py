@@ -1,7 +1,12 @@
 
 import logging
 import threading
-import cv2
+
+try:
+    from cv2 import cv2
+except ImportError:
+    import cv2
+
 from .util import FPSTimer
 
 class Camera( threading.Thread ):

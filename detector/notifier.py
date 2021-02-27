@@ -16,9 +16,9 @@ class LoggerNotifier( Notifier ):
 
     def send( self, subject, message ):
         if 'ignored' == subject:
-            self.logger.debug( '{}: {}'.format( subject, message ) )
+            self.logger.debug( '%s: %s', subject, message )
         else:
-            self.logger.info( '{}: {}'.format( subject, message ) )
+            self.logger.info( '%s: %s', subject, message )
 
 class MQTTNotifier( Notifier ):
     def __init__( self, **kwargs ):
@@ -42,14 +42,14 @@ class MQTTNotifier( Notifier ):
             self.mqtt.tls_set(
                 kwargs['ca'], tls_version=ssl.PROTOCOL_TLSv1_2 )
         self.mqtt.on_connect = self.on_connected
-        logger.info( 'connecting to MQTT at {}:{}...'.format(
-            kwargs['host'], int( kwargs['port'] ) ) )
+        logger.info( 'connecting to MQTT at %s:%d...',
+            kwargs['host'], int( kwargs['port'] ) )
         self.mqtt.connect( kwargs['host'], int( kwargs['port'] ) )
 
     def send( self, subject, message ):
         logger = logging.getLogger( 'mqtt.send' )
         topic = '{}/{}'.format( self.topic, subject )
-        logger.debug( 'publishing {} to {}...'.format( message, topic ) ) 
+        logger.debug( 'publishing %s to %s...', message, topic )
         self.mqtt.publish( topic, message )
 
     def snapshot( self, subject, attachment ):
@@ -58,7 +58,7 @@ class MQTTNotifier( Notifier ):
             return
         topic = '{}/{}'.format( self.topic, subject )
         sz = round( len( attachment ) / 1024, 2 )
-        logger.debug( 'snapshot ({}kB) to {}...'.format( sz, topic ) )
+        logger.debug( 'snapshot (%dkB) to %s...', sz, topic )
         self.mqtt.publish( topic, attachment, retain=True )
         self.mqtt.publish(
             '{}/timestamp'.format( topic ), str( time.time() ), retain=True )

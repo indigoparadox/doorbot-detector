@@ -3,3 +3,4 @@ detector.ini
 __pycache__
 *.pyc
 snapshots
+env

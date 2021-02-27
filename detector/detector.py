@@ -1,8 +1,13 @@
 
 import logging
 import threading
+
 import numpy
-import cv2
+try:
+    from cv2 import cv2
+except ImportError:
+    import cv2
+
 from .util import FPSTimer, FrameLock
 
 CAPTURE_NONE = 0
@@ -73,8 +78,14 @@ class Detector( threading.Thread ):
             with self._frame.get_frame() as orig_frame:
                 frame = orig_frame.copy()
 
+            # TODO: Move elsewhere.
+            if hasattr( self.cam, 'overlays' ):
+                if 'motion' not in self.cam.overlays.highlights:
+                    self.cam.overlays.highlights['motion'] = {'boxes': []}
+                self.cam.overlays.highlights['motion']['boxes'] = []
+
             event = self.detect( frame )
-            if 'movement' == event.event_type:
+            if event and 'movement' == event.event_type:
                 for capturer in self.cam.capturers:
                     capturer.handle_motion_frame( frame, self.cam.w, self.cam.h )
 
@@ -177,11 +188,6 @@ class MotionDetector( Detector ):
             fg_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )[-2:]
         areas = [cv2.contourArea(c) for c in contours]
 
-        if hasattr( self.cam, 'overlays' ):
-            if 'motion' not in self.cam.overlays.highlights:
-                self.cam.overlays.highlights['motion'] = {'boxes': []}
-            self.cam.overlays.highlights['motion']['boxes'] = []
-
         if 0 < len( areas ):
 
             max_idx = numpy.argmax( areas )
@@ -189,4 +195,6 @@ class MotionDetector( Detector ):
             cnt_iter = contours[max_idx]
             rect_x, rect_y, rect_w, rect_h = cv2.boundingRect( cnt_iter )
             
-            self.handle_movement( frame, rect_x, rect_y, rect_w, rect_h )
+            return self.handle_movement( frame, rect_x, rect_y, rect_w, rect_h )
+
+        return None

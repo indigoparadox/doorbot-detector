@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
-import cv2
 import random
 import logging
+
+try:
+    from cv2 import cv2
+except ImportError:
+    import cv2
 
 from detector.detector import MotionDetector
 
@@ -125,7 +129,7 @@ def tune( config, gen=0 ):
         return config
 
     children = []
-    highest_gc = None
+    highest_gc = {}
     for i in range( CHILDREN_PER_GEN ):
         child = config.copy()
         child['child_index'] = i

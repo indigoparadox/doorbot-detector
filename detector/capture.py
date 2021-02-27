@@ -8,7 +8,10 @@ from ftplib import FTP, FTP_TLS
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 
-import cv2
+try:
+    from cv2 import cv2
+except ImportError:
+    import cv2
 
 class Capture( object ):
 
