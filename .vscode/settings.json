@@ -17,6 +17,7 @@
         "**/.git/subtree-cache/**": true,
         "**/node_modules/**": true,
         "**/.hg/store/**": true,
-        "**/env/**"
+        "**/env/**": true,
+        "**/snapshots/**": true
     }
 }

@@ -8,7 +8,7 @@ try:
 except ImportError:
     import cv2
 
-from .util import FPSTimer, FrameLock
+from doorbot.util import FPSTimer, FrameLock
 
 CAPTURE_NONE = 0
 CAPTURE_VIDEO = 1

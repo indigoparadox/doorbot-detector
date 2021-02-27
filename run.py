@@ -3,12 +3,12 @@
 import logging
 import argparse
 from configparser import ConfigParser
-from detector.notifier import MQTTNotifier, LoggerNotifier
-from detector.capture import VideoCapture, PhotoCapture
-from detector.observer import ReserverThread, FramebufferThread
-from detector.detector import MotionDetector
-from detector.camera import IPCamera
-from detector.overlay import Overlays, WeatherOverlay
+from doorbot.notifier import MQTTNotifier, LoggerNotifier
+from doorbot.capture import VideoCapture, PhotoCapture
+from doorbot.observer import ReserverThread, FramebufferThread
+from doorbot.detector import MotionDetector
+from doorbot.camera import IPCamera
+from doorbot.overlay import Overlays, WeatherOverlay
 
 def load_module_config( config, key ):
     out_cfg = {}
@@ -43,8 +43,8 @@ def main():
 
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
-        logging.getLogger( 'detector.run' ).setLevel( logging.INFO )
-        logging.getLogger( 'detector.process' ).setLevel( logging.WARNING )
+        logging.getLogger( 'doorbot.run' ).setLevel( logging.INFO )
+        logging.getLogger( 'doorbot.process' ).setLevel( logging.WARNING )
         logging.getLogger( 'camera.process' ).setLevel( logging.WARNING )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     elif args.quiet:

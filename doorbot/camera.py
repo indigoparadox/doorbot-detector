@@ -7,7 +7,7 @@ try:
 except ImportError:
     import cv2
 
-from .util import FPSTimer
+from doorbot.util import FPSTimer
 
 class Camera( threading.Thread ):
 
