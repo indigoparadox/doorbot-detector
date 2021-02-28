@@ -53,12 +53,20 @@ class FPSTimer( object ):
                 threading.get_ident() )
             self._loop_info.durations = []
 
+        return sleep_delay
+
+# region rw_lock
+
+class RWLockWriteException( Exception ):
+    pass
+
 class RWLock( object ):
 
-    def __init__( self ):
+    def __init__( self, blocking=True ):
         self._ready = threading.Condition( threading.Lock() )
         self._readers = 0
         self._wrapped_item = None
+        self.logger = logging.getLogger( 'framelock' )
 
     @property
     def _wrapped_abstraction( self ):
@@ -76,36 +84,32 @@ class RWLock( object ):
 
         self._wrapped_item = value
 
-    @contextmanager
-    def set_frame( self, frame ):
-        logger = logging.getLogger( 'framelock.write' )
+    def _lock_write( self ):
         self._ready.acquire()
         while 0 < self._readers:
-            logger.debug( 'waiting for write (%d readers, thread %d)...',
+            self.logger.debug( 'waiting for write (%d readers, thread %d)...',
                 self._readers, threading.get_ident() )
             self._ready.wait()
-        logger.debug( 'locking frame for write (thread %d)...',
+        self.logger.debug( 'locking frame for write (thread %d)...',
             threading.get_ident() )
-        try:
-            self._wrapped_abstraction = frame
-        except Exception as e:
-            logger.warning( e )
-        logger.debug( 'releasing write lock (thread %d)',
+
+    def _release_write( self ):
+        self.logger.debug( 'releasing write lock (thread %d)',
             threading.get_ident() )
         self._ready.release()
 
-    @contextmanager
-    def get_frame( self ):
-        logger = logging.getLogger( 'framelock.read' )
-        logger.debug( 'locking frame for read (thread %d)...',
+    def _lock_read( self ):
+        self.logger.debug( 'locking frame for read (thread %d)...',
             threading.get_ident() )
+            
         self._ready.acquire()
         try:
             self._readers += 1
         finally:
             self._ready.release()
-        yield self._wrapped_abstraction
-        logger.debug( 'releasing read lock (thread %d)',
+
+    def _release_read( self ):
+        self.logger.debug( 'releasing read lock (thread %d)',
             threading.get_ident() )
         self._ready.acquire()
         try:
@@ -114,6 +118,21 @@ class RWLock( object ):
                 self._ready.notifyAll()
         finally:
             self._ready.release()
+
+    @contextmanager
+    def set_frame( self, frame ):
+        self._lock_write()
+        try:
+            self._wrapped_abstraction = frame
+        except Exception as e:
+            self.logger.warning( e )
+        self._release_write()
+
+    @contextmanager
+    def get_frame( self ):
+        self._lock_read()
+        yield self._wrapped_abstraction
+        self._release_read()
 
 class FrameLock( RWLock ):
     def __init__( self ):
@@ -136,3 +155,5 @@ class FrameLock( RWLock ):
 
         self._wrapped_item = value.copy()
         self.frame_ready = True
+
+# endregion
