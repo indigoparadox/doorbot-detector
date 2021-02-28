@@ -62,8 +62,10 @@ class RWLockWriteException( Exception ):
 
 class RWLock( object ):
 
-    def __init__( self, blocking=True ):
-        self._ready = threading.Condition( threading.Lock() )
+    def __init__( self, blocking=True, lock=None ):
+        if not lock:
+            lock = threading.Lock()
+        self._ready = threading.Condition( lock )
         self._readers = 0
         self._wrapped_item = None
         self.logger = logging.getLogger( 'framelock' )
