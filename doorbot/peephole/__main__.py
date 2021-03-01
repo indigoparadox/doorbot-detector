@@ -13,7 +13,7 @@ from PIL import ImageTk, Image, ImageDraw
 
 TrayMenu = None
 TrayIcon = None
-from doorbot.overlays import Overlays, WeatherOverlay, OverlayHandler
+from doorbot.overlays import Overlays, OverlayHandler
 from doorbot.exceptions import TrayNotAvailableException
 try:
     from doorbot.peephole.icon import TrayIcon, TrayMenu
@@ -54,12 +54,12 @@ class SnapWindow( Frame ):
         self.pack()
 
         # Setup overlays.
-        self.timestamp_overlay = kwargs['timestamp_overlay']
+        #self.timestamp_overlay = kwargs['timestamp_overlay']
 
-        self.overlays = kwargs['overlays']
+        #self.overlays = kwargs['overlays']
         self.overlay_refresh_delay = int( kwargs['overlayrefreshdelay'] ) if \
             'overlayrefreshdelay' in kwargs else 1000
-        self.overlays.start()
+        #self.overlays.start()
 
         self.overlay = kwargs['winoverlay'] if 'winoverlay' in kwargs else \
             None
@@ -92,7 +92,7 @@ class SnapWindow( Frame ):
         self.logger.info( 'connecting to MQTT at %s...', host_port )
         self.mqtt.connect( host_port[0], host_port[1] )
 
-        self.update_overlays()
+        #self.update_overlays()
 
         if self._autohide:
             self.logger.debug( 'autohide enabled' )
@@ -172,7 +172,7 @@ class SnapWindow( Frame ):
 
         #self.logger.debug( 'updating...' )
 
-        img = self.draw_overlay( self.image_pil.copy() )
+        #img = self.draw_overlay( self.image_pil.copy() )
 
         self.draw_image( img )
 
@@ -199,7 +199,8 @@ class SnapWindow( Frame ):
         self.logger.debug( 'snap received (%d kB)', len( message.payload ) )
         image_raw = Image.open( io.BytesIO( message.payload ) )
         self.image_pil = image_raw.resize( self.snap_size )
-        img = self.draw_overlay( self.image_pil.copy() )
+        #img = self.draw_overlay( self.image_pil.copy() )
+        img = self.image_pil.copy()
         self.draw_image( img )
 
         if self._autohide:
@@ -208,6 +209,7 @@ class SnapWindow( Frame ):
                 self.autohide_delay, self.hide_window )
 
     def on_ts_received( self, client, userdata, message ):
+        return
         msg_str = message.payload.decode( 'utf-8' )
         ts = datetime.fromtimestamp( float( msg_str ) )
         self.timestamp_overlay.current = \
@@ -259,16 +261,16 @@ def main():
     root = Tk()
     root.title( 'Camera Activity' )
 
-    overlay_thread = Overlays()
+    #overlay_thread = Overlays()
 
-    try:
-        weather_cfg = dict( config.items( 'weather' ) )
-        overlay_thread.overlays.append( WeatherOverlay( **weather_cfg ) )
-    except Exception as e:
-        logger.error( e )
+    #try:
+    #    weather_cfg = dict( config.items( 'weather' ) )
+    #    overlay_thread.overlays.append( WeatherOverlay( **weather_cfg ) )
+    #except Exception as e:
+    #    logger.error( e )
 
-    tso = TimestampOverlay()
-    overlay_thread.overlays.append( tso )
+    #tso = TimestampOverlay()
+    #overlay_thread.overlays.append( tso )
 
     tray_menu = None
     tray_icon = None
@@ -277,9 +279,9 @@ def main():
         tray_icon = \
             TrayIcon( 'detector-window-icon', 'camera-web', tray_menu )
 
-    win_cfg = dict( config.items( 'mqtt' ) )
-    win_cfg['overlays'] = overlay_thread
-    win_cfg['timestamp_overlay'] = tso
+    win_cfg = dict( config.items( 'doorbot.notifiers.mqtt' ) )
+    #win_cfg['overlays'] = overlay_thread
+    #win_cfg['timestamp_overlay'] = tso
     win_cfg['icon'] = tray_icon
 
     win = SnapWindow( root, **win_cfg )

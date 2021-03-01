@@ -1,4 +1,5 @@
 
+from configparser import ConfigParser
 import os
 import sys
 import unittest
@@ -8,7 +9,7 @@ import logging
 
 sys.path.insert( 0, os.path.dirname( os.path.dirname( __file__) ) )
 
-from doorbot.util import FPSTimer, RWLock, FrameLock, RWLockWriteException
+from doorbot.util import FPSTimer, RWLock, FrameLock, RWLockWriteException, load_modules
 
 class TestUtil( unittest.TestCase ):
 
@@ -25,6 +26,12 @@ class TestUtil( unittest.TestCase ):
     def tearDown(self) -> None:
 
         return super().tearDown()
+
+    def test_list_modules( self ):
+        config = ConfigParser()
+        config.read( 'detector.ini' )
+        parsed_config = load_modules( config )
+        print( parsed_config )
 
     def test_fpstimer( self ):
 

@@ -9,13 +9,9 @@ try:
 except ImportError:
     import cv2
 
-from doorbot.notifiers import MQTTNotifier, LoggerNotifier
-from doorbot.capturers import VideoCapture, PhotoCapture
-from doorbot.observers import ReserverThread, FramebufferThread
-from doorbot.detectors import MotionDetector
-from doorbot.cameras import IPCamera
-from doorbot.overlays import Overlays, WeatherOverlay
-from doorbot.util import FPSTimer
+from doorbot.portability import image_to_jpeg
+from doorbot.overlays.opencv import OpenCVOverlays
+from doorbot.util import FPSTimer, load_modules
 
 def load_module_config( config, key ):
     out_cfg = {}
@@ -45,65 +41,63 @@ class Doorbot( Thread ):
 
         config = ConfigParser()
         config.read( config_path )
+        module_configs = load_modules( config )
+
+        self.logger = logging.getLogger( 'main' )
 
         # Setup the notifier.
 
         self.notifiers = []
 
-        self.notifiers.append( LoggerNotifier() )
-
-        self.logger = logging.getLogger( 'main' )
-
-        mqtt_cfg = load_module_config( config, 'mqtt' )
-        if None != mqtt_cfg:
-            self.notifiers.append( MQTTNotifier( **mqtt_cfg ) )
+        for notifier_cfg in module_configs['notifiers']:
+            notifier = notifier_cfg['module'].PLUGIN_CLASS( **notifier_cfg )
+            self.notifiers.append( notifier )
 
         # Add capturer utilities.
 
         self.capturers = []
 
-        vcap_cfg = load_module_config( config, 'videocap' )
-        if None != vcap_cfg:
-            self.capturers.append( VideoCapture( **vcap_cfg ) )
-
-        pcap_cfg = load_module_config( config, 'photocap' )
-        if None != pcap_cfg:
-            self.capturers.append( PhotoCapture( **pcap_cfg ) )
+        for capturer_cfg in module_configs['capturers']:
+            capturer = capturer_cfg['module'].PLUGIN_CLASS( **capturer_cfg )
+            self.capturers.append( capturer )
 
         # Setup the detector and observer satellite threads.
 
         self.observer_threads = []
 
-        fb_cfg = load_module_config( config, 'framebuffer' )
-        if None != fb_cfg:
-            self.observer_threads.append( FramebufferThread( **fb_cfg ) )
+        for observer_cfg in module_configs['observers']:
+            observer = observer_cfg['module'].PLUGIN_CLASS( **observer_cfg )
+            self.observer_threads.append( observer )
 
-        rsrv_cfg = load_module_config( config, 'reserver' )
-        if None != rsrv_cfg:
-            self.observer_threads.append( ReserverThread( **rsrv_cfg ) )
+        self.detectors = []
 
-        # TODO: Make loaded detector configurable.
-        self.detector = None
-        motion_cfg = load_module_config( config, 'motiondetect' )
-        if None != motion_cfg:
-            self.detector = MotionDetector( **motion_cfg )
+        for detector_cfg in module_configs['detectors']:
+            detector = detector_cfg['module'].PLUGIN_CLASS( **detector_cfg )
+            self.detectors.append( detector )
 
         # TODO: Make loaded overlays configurable.
-        self.overlay_thread = Overlays()
+        #overlays_cfg = load_module_config( config, 'doorbot.overlays' )
+        self.overlay_thread = OpenCVOverlays()
 
-        weather_cfg = load_module_config( config, 'weather' )
-        if None != weather_cfg:
-            self.overlay_thread.overlays.append( WeatherOverlay( **weather_cfg ) )
+        for overlay_cfg in module_configs['overlays']:
+            overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
+            self.overlay_thread.add_overlay( overlay )
+        #weather_cfg = load_module_config( config, 'weather' )
+        #if None != weather_cfg:
+        #    self.overlay_thread.overlays.append( WeatherOverlay( **weather_cfg ) )
 
-        cam_cfg = dict( config.items( 'stream' ) )
-        self.camera = IPCamera( **cam_cfg )
+        #cam_cfg = dict( config.items( 'stream' ) )
+        self.camera = module_configs['cameras'][0]['module'].PLUGIN_CLASS( **module_configs['cameras'][0] )
 
-    def notify( self, subject, message, snapshot=None ):
+    def notify( self, subject, message, has_frame, frame=None ):
         for notifier in self.notifiers:
             notifier.send( subject, message )
-        if snapshot:
+        if has_frame:
             for notifier in self.notifiers:
-                notifier.snapshot( 'snapshot/{}'.format( subject ), snapshot )
+                overlayed_frame = frame.copy()
+                overlayed_frame = self.overlay_thread.draw( overlayed_frame, **notifier.kwargs )
+                jpg = image_to_jpeg( overlayed_frame )
+                notifier.snapshot( 'snapshot/{}'.format( subject ), jpg )
 
     def run( self ):
 
@@ -121,7 +115,6 @@ class Doorbot( Thread ):
         #    thd.start()
 
         for thd in self.observer_threads:
-            thd.cam = self
             thd.start()
 
         while self.running:
@@ -141,7 +134,7 @@ class Doorbot( Thread ):
             if self.stale_frames:
                 self.logger.debug( 'skipped %d stale frames', self.stale_frames )
                 self.stale_frames = 0
-            
+
             # The camera provides a copy while using the proper locks.
             frame = self.camera.frame
 
@@ -149,12 +142,12 @@ class Doorbot( Thread ):
             #    self.timer.loop_timer_end()
             #    continue
 
-            # TODO: Move into its own overlay module.
-            if 'motion' not in self.overlay_thread.highlights:
-                self.overlay_thread.highlights['motion'] = {'boxes': []}
-            self.overlay_thread.highlights['motion']['boxes'] = []
+            for observer in self.observer_threads:
+                overlayed_frame = frame.copy()
+                overlayed_frame = self.overlay_thread.draw( overlayed_frame, **observer.kwargs )
+                observer.set_frame( overlayed_frame )
 
-            event = self.detector.detect( frame )
+            event = self.detectors[0].detect( frame )
             if event and 'movement' == event.event_type:
                 for capturer in self.capturers:
                     capturer.handle_motion_frame( frame, self.camera.width, self.camera.height )
@@ -162,18 +155,9 @@ class Doorbot( Thread ):
                 # TODO: Send notifier w/ summary of current objects.
                 # TODO: Make this summary retained.
                 # TODO: Send image data.
-                ret, jpg = cv2.imencode( '.jpg', event.frame )
                 self.notify( 'movement', '{} at {}'.format(
-                    event.dimensions, event.position ), snapshot=jpg.tostring() )
+                    event.dimensions, event.position ), True, frame=frame )
 
-                # TODO: Vary color based on type of object.
-                color = (255, 0, 0)
-                self.overlay_thread.highlights['motion']['boxes'].append( {
-                    'x1': event.position[0], 'y1': event.position[1],
-                    'x2': event.position[0] + event.dimensions[0],
-                    'y2': event.position[1] + event.dimensions[1],
-                    'color': color
-                } )
             else:
                 # No motion frames were found, digest capture pipeline.
                 for capturer in self.capturers:

@@ -2,7 +2,31 @@
 import logging
 import time
 import threading
+import importlib
+from configparser import ConfigParser
 from contextlib import contextmanager
+
+def load_modules( config: ConfigParser ):
+
+    config_out = {
+        'observers': [],
+        'cameras': [],
+        'detectors': [],
+        'overlays': [],
+        'capturers': [],
+        'notifiers': []
+    }
+
+    for section_name in config.sections():
+        item_config = dict( config.items( section_name ) )
+        if 'enable' in item_config and 'true' == item_config['enable']:
+            item_config['module'] = importlib.import_module( section_name.strip() )
+            #print( section_name )
+            #rint( item_config['module'] )
+            item_config['type'] = item_config['module'].PLUGIN_TYPE
+            config_out[item_config['type']].append( item_config )
+
+    return config_out
 
 class FPSTimer( object ):
 

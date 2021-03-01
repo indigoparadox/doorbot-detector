@@ -2,81 +2,102 @@
 import threading
 import logging
 import time
-import html
-
-import requests
-from requests.exceptions import RequestException
 
 class Overlays( threading.Thread ):
 
-    def __init__( self ):
+    def __init__( self, **kwargs ):
         super().__init__()
         self.running = True
-        self.overlays = []
+        self._overlays = []
         self.highlights = {}
         self.daemon = True
+        self.refresh = kwargs['refresh'] if 'refresh' in kwargs else 5
 
-    def line( self, line ):
-        line = line.replace( '<time>', time.strftime( '%H:%M:%S %m/%d/%Y' ) )
-        for overlay in self.overlays:
-            line = line.replace( overlay.token, overlay.current )
-        return line
+    def add_overlay( self, overlay ):
+        overlay.master = self
+        self._overlays.append( overlay )
+
+    def tokenize( self, text ):
+
+        ''' Given a line of text (nominally specified in the config), replace 
+        tokens in it with tokens provided by loaded overlays. '''
+
+        for overlay in self._overlays:
+            for token, replace in overlay.tokens.items():
+                text = text.replace( '<{}>'.format( token ), replace )
+
+        return text
+
+    def text( self, frame, text, position ):
+
+        ''' Draw text on the frame. This should be overridden by the
+        implementation-specific overlay handler. '''
+
+        return frame
+
+    def rect( self, frame, x1, y1, x2, y2, color, **kwargs ):
+
+        ''' Draw a rectangle on the frame. This should be overridden by the
+        implementation-specific overlay handler. '''
+
+        return frame
+
+    def draw( self, frame, **kwargs ):
+
+        ''' This should NOT be overridden directly, but the methods it uses
+        (such as .text()) should be overridden by the implementation=specific
+        overlay master. Uses kwargs passed from config of the observer whose
+        frame it's drawing to. '''
+
+        # Handle general kwargs.
+        overlay_text = kwargs['overlay'] if 'overlay' in kwargs else ''
+        #self.highlights = kwargs['highlight'].split( ',' ) \
+        #    if 'highlight' in kwargs else []
+        overlay_coords = \
+            tuple( [int( x ) for x in kwargs['overlaycoords'].split( ',' )] ) \
+            if 'overlaycoords' in kwargs else (10, 10)
+        overlay_line_height = int( kwargs['overlaylineheight'] ) \
+            if 'overlaylineheight' in kwargs else 20
+
+        # Allow overlays to draw graphics.
+        for overlay in self._overlays:
+            overlay.draw( frame )
+
+        # Draw text provided by simple text-only overlays.
+        text = overlay_text.split( "\\n" )
+        origin = overlay_coords
+        for line in text:
+            line = self.tokenize( line )
+            line = self.text( frame, line, origin, **kwargs )
+            # TODO: Measure text line for Y-height.
+            origin = (origin[0], origin[1] + overlay_line_height)
+
+        return frame
 
     def run( self ):
 
         while self.running:
-            for overlay in self.overlays:
+            for overlay in self._overlays:
                 overlay.update()
 
-            time.sleep( 5 )
+            time.sleep( self.refresh )
 
 class OverlayHandler( object ):
 
     def __init__( self, **kwargs ):
         self.current = ''
+        self.master = None
+
+    @property
+    def tokens( self ):
+        return {}
+
+    def draw( self, frame, **kwargs ):
+
+        ''' Draw overlay on the frame. This can be overridden by overlays that
+        want to draw graphics. Simpler overlays can just provide tokens. '''
+
+        return frame
 
     def update( self ):
         pass
-
-class WeatherOverlay( OverlayHandler ):
-
-    def __init__( self, **kwargs ):
-        super().__init__( **kwargs )
-        self.token = '<weather>'
-        self.url = kwargs['url']
-        self.refresh = float( kwargs['refresh'] ) if 'refresh' in kwargs else \
-            300
-        self.last_updated = time.time()
-        self.countdown = 0
-        self.format = kwargs['format'] if 'format' in kwargs else '<outTemp>'
-
-    def update( self ):
-
-        logger = logging.getLogger( 'overlay.weather' )
-
-        current_time = time.time()
-        elapsed = current_time - self.last_updated
-        self.countdown -= elapsed
-        if 0 < self.countdown:
-            return
-
-        logger.debug( 'update timer elapsed' )
-
-        # Reset the timer.
-        self.countdown = self.refresh
-
-        # Update weather.
-        weather = None
-        try:
-            req = requests.get( self.url )
-            weather = req.json()
-        except RequestException as exc:
-            logger.error( 'unable to fetch weather: %s', exc )
-            return
-
-        self.current = self.format
-        current = weather['stats']['current']
-        for token in current:
-            self.current = self.current.replace(
-                '<{}>'.format( token ),
-                html.unescape( current[token] ) )
