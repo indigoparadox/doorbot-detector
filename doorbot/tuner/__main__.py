@@ -8,7 +8,7 @@ try:
 except ImportError:
     import cv2
 
-from detector.detector import MotionDetector
+from doorbot.detector import MotionDetector
 
 person_seq = [
     'testdata/motion1/2021-01-10-14-09-45-065179.jpg',
@@ -88,7 +88,7 @@ shadow_seq = [
     'testdata/motion2/2021-01-12-23-09-40-326435.jpg',
     'testdata/motion2/2021-01-12-23-09-40-542747.jpg',
     'testdata/motion2/2021-01-12-23-09-40-766118.jpg']
-        
+
 initial_config = {
     'threshold': 50,
     'varthreshold': 200,

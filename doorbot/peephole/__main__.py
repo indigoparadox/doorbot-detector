@@ -13,7 +13,7 @@ from PIL import ImageTk, Image, ImageDraw
 
 TrayMenu = None
 TrayIcon = None
-from doorbot.overlay import Overlays, WeatherOverlay, OverlayHandler
+from doorbot.overlays import Overlays, WeatherOverlay, OverlayHandler
 from doorbot.exceptions import TrayNotAvailableException
 try:
     from doorbot.peephole.icon import TrayIcon, TrayMenu

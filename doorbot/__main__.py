@@ -9,12 +9,12 @@ try:
 except ImportError:
     import cv2
 
-from doorbot.notifier import MQTTNotifier, LoggerNotifier
-from doorbot.capture import VideoCapture, PhotoCapture
-from doorbot.observer import ReserverThread, FramebufferThread
-from doorbot.detector import MotionDetector
-from doorbot.camera import IPCamera
-from doorbot.overlay import Overlays, WeatherOverlay
+from doorbot.notifiers import MQTTNotifier, LoggerNotifier
+from doorbot.capturers import VideoCapture, PhotoCapture
+from doorbot.observers import ReserverThread, FramebufferThread
+from doorbot.detectors import MotionDetector
+from doorbot.cameras import IPCamera
+from doorbot.overlays import Overlays, WeatherOverlay
 from doorbot.util import FPSTimer
 
 def load_module_config( config, key ):

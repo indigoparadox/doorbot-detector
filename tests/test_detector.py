@@ -9,7 +9,7 @@ from faker import Faker
 sys.path.insert( 0, os.path.dirname( os.path.dirname( __file__) ) )
 
 from tests.fake_camera import FakeCamera
-from doorbot.detector import DetectionEvent, MotionDetector
+from doorbot.detectors import DetectionEvent, MotionDetector
 
 class TestDetector( unittest.TestCase ):
 

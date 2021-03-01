@@ -10,7 +10,7 @@ try:
 except ImportError:
     import cv2
 
-from .util import FPSTimer, FrameLock
+from ..util import FPSTimer, FrameLock
 
 class ObserverThread( threading.Thread ):
 
