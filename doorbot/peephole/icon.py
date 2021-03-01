@@ -3,6 +3,8 @@ import threading
 import logging
 import os
 
+from doorbot.exceptions import TrayNotAvailableException
+
 INTERFACE_GTK = 1
 INTERFACE_WIN32 = 2
 
@@ -16,14 +18,14 @@ try:
     from gi.repository import Gtk
     from gi.repository import AppIndicator3 as appindicator
     interface = INTERFACE_GTK
-except Exception as e:
-    logger.error( 'error importing gtk: {}'.format( e ) )
+except ImportError as e:
+    logger.error( 'error importing gtk: %s', e )
     try:
         from .notificationicon import NotificationIcon
         interface = INTERFACE_WIN32
-    except Exception as e:
-        logger.error( 'error importing win32: {}'.format( e ) )
-        logger.error( 'no tray icon mechanism available' )
+    except (ImportError, ValueError) as e:
+        logger.error( 'error importing win32: %s', e )
+        raise TrayNotAvailableException( 'no tray icon mechanism available' ) from e
 
 class TrayMenu( object ):
     def __init__( self ):
@@ -49,7 +51,7 @@ class TrayMenu( object ):
                 raise Exception( 'not implemented' )
         else:
             logger.warning(
-                'tried to get status of missing option item {}'.format( key ) )
+                'tried to get status of missing option item %s', key )
             return None
 
     def set_checked( self, key, value ):
@@ -69,7 +71,7 @@ class TrayMenu( object ):
                 raise Exception( 'not implemented' )
         else:
             logger.warning(
-                'tried to set status of missing option item {}'.format( key ) )
+                'tried to set status of missing option item %s', key )
 
     def add_item( self, key, label, callback, *args, **kwargs ):
         if interface == INTERFACE_GTK:
@@ -94,7 +96,8 @@ class TrayMenu( object ):
             self._items[key].set_active( checked )
 
         elif interface == INTERFACE_WIN32:
-            self._items[key] = (self._title_checked_win32, self._click_checked_win32, key, callback, *args)
+            self._items[key] = (self._title_checked_win32,
+                self._click_checked_win32, key, callback, *args)
             self._meta[key] = {'checked': checked, 'label': label}
 
         else:
@@ -126,7 +129,7 @@ class TrayIcon( threading.Thread ):
     def __init__( self, iid, icon, menu, **kwargs ):
         super().__init__()
 
-        logger = logging.getLogger( 'icon.init' )
+        self.logger = logging.getLogger( 'icon' )
 
         self.daemon = True
 
@@ -136,8 +139,8 @@ class TrayIcon( threading.Thread ):
                 if 'category' in kwargs else \
                 appindicator.IndicatorCategory.APPLICATION_STATUS
 
-            logger.debug( 'creating icon {} with image {}...'.format(
-                iid, icon ) )
+            self.logger.debug( 'creating icon %s with image %s...',
+                iid, icon )
 
             self.icon = appindicator.Indicator.new( iid, icon, category )
             self.icon.set_status( appindicator.IndicatorStatus.ACTIVE )
@@ -148,7 +151,7 @@ class TrayIcon( threading.Thread ):
         elif interface == INTERFACE_WIN32:
             self.ni = NotificationIcon(
                 os.path.join( os.path.dirname( os.path.abspath( __file__ ) ),
-                '..\{}.ico'.format( icon ) ), iid )
+                '..', '{}.ico'.format( icon ) ), iid )
 
         else:
             raise Exception( 'not implemented' )
@@ -156,8 +159,6 @@ class TrayIcon( threading.Thread ):
         self.menu = menu
 
     def run( self ):
-
-        logger = logging.getLogger( 'icon.run' )
 
         if interface == INTERFACE_GTK:
             self.icon.set_menu( self.menu._menu )
@@ -176,9 +177,6 @@ class TrayIcon( threading.Thread ):
 
     def stop( self ):
 
-        logger = logging.getLogger( 'icon.stop' )
-    
         if interface == INTERFACE_WIN32:
             logger.debug( 'cleaning up tray icon...' )
             self.ni.die()
-

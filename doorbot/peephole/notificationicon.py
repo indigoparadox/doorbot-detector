@@ -498,12 +498,12 @@ DispatchMessage.restype = ctypes.wintypes.ULONG
 DispatchMessage.argtypes = [ctypes.POINTER(MSG)]
 
 def LoadIcon(iconfilename, small=False):
-        return LoadImage(0,
-                         iconfilename,
-                         IMAGE_ICON,
-                         16 if small else 0,
-                         16 if small else 0,
-                         LR_LOADFROMFILE)
+    return LoadImage(0,
+        iconfilename,
+        IMAGE_ICON,
+        16 if small else 0,
+        16 if small else 0,
+        LR_LOADFROMFILE)
 
 
 class NotificationIcon(object):

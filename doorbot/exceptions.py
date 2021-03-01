@@ -1,0 +1,3 @@
+
+class TrayNotAvailableException( Exception ):
+    pass
