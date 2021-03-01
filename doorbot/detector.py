@@ -1,14 +1,11 @@
 
 import logging
-import threading
 
 import numpy
 try:
     from cv2 import cv2
 except ImportError:
     import cv2
-
-from doorbot.util import FPSTimer, FrameLock
 
 CAPTURE_NONE = 0
 CAPTURE_VIDEO = 1
@@ -24,26 +21,13 @@ class DetectionEvent( object ):
         self.position = position
         self.frame = frame
 
-class Detector( threading.Thread ):
+class Detector( object ):
 
-    ''' This grabs frames from the camera and detects stuff in them. '''
-
-    def __init__( self, **kwargs ):
-
-        super().__init__()
-
-        self._source_lock = threading.Lock()
-        self._frame = FrameLock()
-        self._frame_processed = True
-        self.daemon = True
-        self.running = True
-        self.cam = None
-
-        self.timer = FPSTimer( self, **kwargs )
-
-    def set_frame( self, value ):
-        self._frame.set_frame( value )
-        self._frame_processed = False
+    ''' A detector analyses the images it's given for activity and then
+    returns the results. The next step the program takes is contingent
+    on these analyses, so the detection runs in the main loop. This class
+    should be subclassed by specialized detectors that use various means to
+    determine activity in an image. '''
 
     def detect( self, frame ):
 
@@ -54,70 +38,12 @@ class Detector( threading.Thread ):
         return DetectionEvent(
             'ignored', (0, 0), (0, 0), None )
 
-    def run( self ):
-
-        ''' Main loop for detection thread. Dispatch relevant messages to other
-        threads based on detected activity. '''
-
-        logger = logging.getLogger( 'detector.run' )
-
-        logger.debug( 'starting detector loop...' )
-
-        while self.running:
-            self.timer.loop_timer_start()
-
-            # Spin until we have a new frame to process.
-            if self._frame_processed or not self._frame.frame_ready:
-                logger.debug( 'waiting for frame...' )
-                self.timer.loop_timer_end()
-                continue
-
-            logger.debug( 'processing frame...' )
-
-            frame = None
-            with self._frame.get_frame() as orig_frame:
-                frame = orig_frame.copy()
-
-            # TODO: Move elsewhere.
-            if hasattr( self.cam, 'overlays' ):
-                if 'motion' not in self.cam.overlays.highlights:
-                    self.cam.overlays.highlights['motion'] = {'boxes': []}
-                self.cam.overlays.highlights['motion']['boxes'] = []
-
-            event = self.detect( frame )
-            if event and 'movement' == event.event_type:
-                for capturer in self.cam.capturers:
-                    capturer.handle_motion_frame( frame, self.cam.w, self.cam.h )
-
-                # TODO: Send notifier w/ summary of current objects.
-                # TODO: Make this summary retained.
-                # TODO: Send image data.
-                ret, jpg = cv2.imencode( '.jpg', event.frame )
-                self.cam.notify( 'movement', '{} at {}'.format(
-                    event.dimensions, event.position ), snapshot=jpg.tostring() )
-
-                # TODO: Vary color based on type of object.
-                color = (255, 0, 0)
-                self.cam.overlays.highlights['motion']['boxes'].append( {
-                    'x1': event.position[0], 'y1': event.position[1],
-                    'x2': event.position[0] + event.dimensions[0],
-                    'y2': event.position[1] + event.dimensions[1],
-                    'color': color
-                } )
-            else:
-                # No motion frames were found, digest capture pipeline.
-                for capturer in self.cam.capturers:
-                    capturer.finalize_motion( frame, self.cam.w, self.cam.h )
-
-            self.timer.loop_timer_end()
 
 class MotionDetector( Detector ):
 
     ''' Specialized detector that looks for motion accross frames. '''
 
     def __init__( self, **kwargs ):
-
-        super().__init__( **kwargs )
 
         logger = logging.getLogger( 'detector.motion.init' )
 
@@ -152,6 +78,9 @@ class MotionDetector( Detector ):
 
         ''' Motion frames were found. '''
 
+        cam_w = frame.shape[0]
+        cam_h = frame.shape[1]
+
         if self.min_w > rect_w or self.min_h > rect_h:
             # Filter out small movements.
             #self.cam.notify( 'ignored', 'small {}x{} at {}, {}'.format(
@@ -161,8 +90,8 @@ class MotionDetector( Detector ):
         elif self.ignore_edges and \
         (0 == rect_w or \
         0 == rect_h or \
-        rect_x + rect_w >= self.cam.w or \
-        rect_y + rect_h >= self.cam.h):
+        rect_x + rect_w >= cam_w or \
+        rect_y + rect_h >= cam_h):
             # Filter out edge movements.
             return DetectionEvent(
                 'ignored', (rect_w, rect_h), (rect_x, rect_y), frame )
@@ -194,7 +123,7 @@ class MotionDetector( Detector ):
 
             cnt_iter = contours[max_idx]
             rect_x, rect_y, rect_w, rect_h = cv2.boundingRect( cnt_iter )
-            
+
             return self.handle_movement( frame, rect_x, rect_y, rect_w, rect_h )
 
         return None

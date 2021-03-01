@@ -7,7 +7,7 @@ try:
 except ImportError:
     import cv2
 
-from doorbot.util import FPSTimer
+from doorbot.util import FPSTimer, FrameLock
 
 class Camera( threading.Thread ):
 
@@ -21,44 +21,42 @@ class Camera( threading.Thread ):
 
         logger.debug( 'setting up camera...' )
 
-        self.w = 0
-        self.h = 0
+        self.width = 0
+        self.height = 0
         self.running = True
         self.timer = FPSTimer( self, **kwargs )
         self.daemon = True
+        self._frame = FrameLock()
+        self.frame_stale = False
+        self._frame_set = False
+        self._ready = False
 
+        '''
         self.notifiers = kwargs['notifiers']
         self.capturers = kwargs['capturers']
         self.observer_threads = kwargs['observers']
         self.detector_threads = kwargs['detectors']
         self.overlays = kwargs['overlays']
+        '''
 
-        self.overlays.start()
+    @property
+    def frame( self ):
+        frame_out = None
+        if self._ready:
+            with self._frame.get_frame() as frame:
+                frame_out = frame.copy()
+                self.frame_stale = True
+        return frame_out
 
-        for thd in self.detector_threads:
-            thd.cam = self
-            thd.start()
+    @frame.setter
+    def frame( self, value ):
+        self._frame.set_frame( value )
+        self.frame_stale = False
+        self._ready = True
 
-        for thd in self.observer_threads:
-            thd.cam = self
-            thd.start()
-
-    def notify( self, subject, message, snapshot=None ):
-        for notifier in self.notifiers:
-            notifier.send( subject, message )
-        if snapshot:
-            for notifier in self.notifiers:
-                notifier.snapshot( 'snapshot/{}'.format( subject ), snapshot )
-
-    def process( self, frame ):
-        logger = logging.getLogger( 'camera.process' )
-        for thd in self.detector_threads:
-            logger.debug( 'setting frame for %s...', type( thd ) )
-            thd.set_frame( frame )
-
-        for thd in self.observer_threads:
-            logger.debug( 'setting frame for %s...', type( thd ) )
-            thd.set_frame( frame )
+    @property
+    def ready( self ):
+        return self._ready
 
 class IPCamera( Camera ):
 
@@ -67,39 +65,41 @@ class IPCamera( Camera ):
         self.attempts = 0
         self.cam_url = kwargs['url']
         self._stream = cv2.VideoCapture( self.cam_url )
+        self.logger = logging.getLogger( 'camera' )
 
         super().__init__( **kwargs )
 
     def run( self ):
 
-        logger = logging.getLogger( 'camera.ip.run' )
-
-        logger.debug( 'starting camera loop...' )
+        self.logger.debug( 'starting camera loop...' )
 
         while self.running:
             self.timer.loop_timer_start()
 
-            if self._stream.isOpened() and 0 >= self.w:
-                self.w = \
+            if self._stream.isOpened() and 0 >= self.width:
+                self.width = \
                     int( self._stream.get( cv2.CAP_PROP_FRAME_WIDTH ) )
-                logger.info( 'video is %d wide', self.w )
-            if self._stream.isOpened() and 0 >= self.h:
-                self.h = \
+                self.logger.info( 'video is %d wide', self.width )
+            if self._stream.isOpened() and 0 >= self.height:
+                self.height = \
                     int( self._stream.get( cv2.CAP_PROP_FRAME_HEIGHT ) )
-                logger.info( 'video is %d high', self.h )
+                self.logger.info( 'video is %d high', self.height )
 
             ret, frame = self._stream.read()
 
             if not ret:
-                logger.error( 'camera disconnected!' )
+                self.logger.error( 'camera disconnected!' )
                 self._stream.release()
                 self.attempts += 1
-                logger.info( 'reconnecting (attempt %d)', self.attempts )
+                self.logger.info( 'reconnecting (attempt %d)', self.attempts )
                 self._stream.open( self.cam_url )
+                self.timer.loop_timer_end()
                 continue
 
             self.attempts = 0
 
-            self.process( frame )
+            self.frame = frame
+
+            #self.process( frame )
 
             self.timer.loop_timer_end()

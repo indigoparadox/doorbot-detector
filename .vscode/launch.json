@@ -11,6 +11,13 @@
             "module": "doorbot"
         },
         {
+            "name": "Python: doorbot (verbose)",
+            "type": "python",
+            "request": "launch",
+            "module": "doorbot",
+            "args": ["-v"]
+        },
+        {
             "name": "Python: peephole",
             "type": "python",
             "request": "launch",

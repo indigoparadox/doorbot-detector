@@ -103,7 +103,7 @@ class RWLock( object ):
     def _lock_read( self ):
         self.logger.debug( 'locking frame for read (thread %d)...',
             threading.get_ident() )
-            
+
         self._ready.acquire()
         try:
             self._readers += 1
@@ -126,8 +126,8 @@ class RWLock( object ):
         self._lock_write()
         try:
             self._wrapped_abstraction = frame
-        except Exception as e:
-            self.logger.warning( e )
+        except Exception as exc:
+            self.logger.error( '%s: %s', type( exc ), exc )
         self._release_write()
 
     @contextmanager

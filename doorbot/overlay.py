@@ -3,7 +3,9 @@ import threading
 import logging
 import time
 import html
+
 import requests
+from requests.exceptions import RequestException
 
 class Overlays( threading.Thread ):
 
@@ -68,8 +70,8 @@ class WeatherOverlay( OverlayHandler ):
         try:
             req = requests.get( self.url )
             weather = req.json()
-        except Exception as e:
-            logger.error( 'unable to fetch weather: %s', e )
+        except RequestException as exc:
+            logger.error( 'unable to fetch weather: %s', exc )
             return
 
         self.current = self.format
