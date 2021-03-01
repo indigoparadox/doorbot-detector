@@ -5,18 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: doorbot",
+            "type": "python",
+            "request": "launch",
+            "module": "doorbot"
+        },
+        {
             "name": "Python: window",
             "type": "python",
             "request": "launch",
             "program": "window.py",
             "console": "integratedTerminal"
         },
-        {
-            "name": "Python: doorbot",
-            "type": "python",
-            "request": "launch",
-            "program": "run.py",
-            "console": "integratedTerminal"
-        }
     ]
 }
