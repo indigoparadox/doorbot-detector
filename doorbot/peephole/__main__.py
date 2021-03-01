@@ -4,13 +4,15 @@ import logging
 import ssl
 import argparse
 import io
-from paho.mqtt import client as mqtt_client
+from datetime import datetime
 from configparser import ConfigParser
+
+from paho.mqtt import client as mqtt_client
 from tkinter import Tk, Frame, Label
 from PIL import ImageTk, Image, ImageDraw
-from detector.overlay import Overlays, WeatherOverlay, OverlayHandler
-from detector.icon import TrayIcon, TrayMenu
-from datetime import datetime
+
+from doorbot.overlay import Overlays, WeatherOverlay, OverlayHandler
+from doorbot.peephole.icon import TrayIcon, TrayMenu
 
 class SnapWindow( Frame ):
 

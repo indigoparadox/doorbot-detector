@@ -11,11 +11,16 @@
             "module": "doorbot"
         },
         {
-            "name": "Python: window",
+            "name": "Python: peephole",
             "type": "python",
             "request": "launch",
-            "program": "window.py",
-            "console": "integratedTerminal"
+            "module": "doorbot.peephole"
         },
+        {
+            "name": "Python: tuner",
+            "type": "python",
+            "request": "launch",
+            "module": "doorbot.tuner"
+        }
     ]
 }
