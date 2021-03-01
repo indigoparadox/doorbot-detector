@@ -1,13 +1,16 @@
 
-from doorbot.capturers.photo import PLUGIN_CLASS, PLUGIN_TYPE
 import os
 import logging
+from queue import Empty
 import shutil
-from threading import Thread
+import multiprocessing
 from datetime import datetime
 from ftplib import FTP, FTP_TLS
+from ftplib import all_errors as FTPExceptions
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
+
+import numpy
 
 try:
     from cv2 import cv2
@@ -18,8 +21,8 @@ from doorbot.capturers import Capture
 
 class VideoCapture( Capture ):
 
-    class VideoCaptureWriter( Thread ):
-        def __init__( self, path, bkp, w, h, fps, ts, fourcc, cont, ftpssl ):
+    class VideoCaptureWriter( multiprocessing.Process ):
+        def __init__( self, path, bkp, width, height, fps, ts, fourcc, cont, ftpssl ):
             super().__init__()
 
             logger = logging.getLogger('capture.video.writer.init' )
@@ -32,9 +35,9 @@ class VideoCapture( Capture ):
             logger.debug( 'creating video writer for %s.mp4...',
                 os.path.join( self.path, self.timestamp ) )
 
-            self.frames = []
-            self.w = w
-            self.h = h
+            self.frames = multiprocessing.Queue()
+            self.width = width
+            self.height = height
             self.fps = fps
             self.fourcc = fourcc
             self.container = cont
@@ -82,15 +85,24 @@ class VideoCapture( Capture ):
             else:
                 filepath = os.path.join( self.path, filename )
 
+            frame_array = []
+            try:
+                frame = self.frames.get( block=True, timeout=1.0 )
+                while isinstance( frame, numpy.ndarray ):
+                    frame_array.insert( 0, frame )
+                    frame = self.frames.get( block=True, timeout=1.0 )
+            except Empty:
+                logger.info( 'encoder thread received %d frames', len( frame_array ) )
+
             logger.info( 'encoding %s (%d frames, %d fps)...',
-                filepath, len( self.frames ), self.fps )
+                filepath, len( frame_array ), self.fps )
 
             # Encode the video file.
             fourcc = cv2.VideoWriter_fourcc( *(self.fourcc) )
             encoder = \
-                cv2.VideoWriter( filepath, fourcc, self.fps, (self.w, self.h) )
-            for frame in self.frames:
-                encoder.write( frame )
+                cv2.VideoWriter( filepath, fourcc, self.fps, (self.width, self.height) )
+            while 0 < len( frame_array ):
+                encoder.write( frame_array.pop() )
             encoder.release()
 
             # Try to upload file if remote path specified.
@@ -99,11 +111,12 @@ class VideoCapture( Capture ):
                     self.upload_ftp( filepath )
 
                     temp_dir.cleanup()
-                except Exception as e:
-                    logger.error( 'ftp upload failure: %s', e )
+                except FTPExceptions as exc:
+                    logger.error( 'ftp upload failure: %s', exc )
                     backup_filepath = os.path.join( self.backup_path, filename )
                     logger.info( 'moving %s to %s...', filepath, backup_filepath )
                     shutil.move( filepath, backup_filepath )
+                    temp_dir.cleanup()
 
             logger.info( 'encoding %s completed', filename )
 
@@ -131,7 +144,7 @@ class VideoCapture( Capture ):
                 self.path, self.backup_path, width, height, self.fps,
                 timestamp, self.fourcc, self.container, self.ftp_ssl )
 
-        self.encoder.frames.append( frame )
+        self.encoder.frames.put_nowait( frame )
 
     def handle_motion_frame( self, frame, width, height ):
 

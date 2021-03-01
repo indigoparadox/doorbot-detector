@@ -25,6 +25,8 @@ class FramebufferThread( ObserverThread ):
 
     def run( self ):
 
+        frame = None
+
         while self.running:
             self.timer.loop_timer_start()
 

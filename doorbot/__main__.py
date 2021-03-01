@@ -4,26 +4,9 @@ import argparse
 from configparser import ConfigParser
 from threading import Thread
 
-try:
-    from cv2 import cv2
-except ImportError:
-    import cv2
-
 from doorbot.portability import image_to_jpeg
 from doorbot.overlays.opencv import OpenCVOverlays
 from doorbot.util import FPSTimer, load_modules
-
-def load_module_config( config, key ):
-    out_cfg = {}
-    try:
-        out_cfg = dict( config.items( key ) )
-    except Exception as e:
-        logging.error( e )
-
-    if 'enable' in out_cfg and 'true' == out_cfg['enable']:
-        return out_cfg
-
-    return None
 
 class Doorbot( Thread ):
 
@@ -75,18 +58,12 @@ class Doorbot( Thread ):
             detector = detector_cfg['module'].PLUGIN_CLASS( **detector_cfg )
             self.detectors.append( detector )
 
-        # TODO: Make loaded overlays configurable.
-        #overlays_cfg = load_module_config( config, 'doorbot.overlays' )
         self.overlay_thread = OpenCVOverlays()
 
         for overlay_cfg in module_configs['overlays']:
             overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
             self.overlay_thread.add_overlay( overlay )
-        #weather_cfg = load_module_config( config, 'weather' )
-        #if None != weather_cfg:
-        #    self.overlay_thread.overlays.append( WeatherOverlay( **weather_cfg ) )
 
-        #cam_cfg = dict( config.items( 'stream' ) )
         self.camera = module_configs['cameras'][0]['module'].PLUGIN_CLASS( **module_configs['cameras'][0] )
 
     def notify( self, subject, message, has_frame, frame=None ):
@@ -110,19 +87,19 @@ class Doorbot( Thread ):
 
         self.overlay_thread.start()
 
-        #for thd in self.detector_threads:
-        #    thd.cam = self
-        #    thd.start()
-
         for thd in self.observer_threads:
             thd.start()
+
+        frame = None
+        overlayed_frame = None
+        event = None
 
         while self.running:
             self.timer.loop_timer_start()
 
             # Spin until we have a new frame to process.
             if not self.camera.ready:
-                logger.debug( 'waiting for frame...' )
+                self.logger.debug( 'waiting for frame...' )
                 self.timer.loop_timer_end()
                 continue
             elif self.camera.frame_stale:
@@ -132,15 +109,11 @@ class Doorbot( Thread ):
 
             #logger.debug( 'processing frame...' )
             if self.stale_frames:
-                self.logger.debug( 'skipped %d stale frames', self.stale_frames )
+                #self.logger.debug( 'skipped %d stale frames', self.stale_frames )
                 self.stale_frames = 0
 
             # The camera provides a copy while using the proper locks.
             frame = self.camera.frame
-
-            #if not frame:
-            #    self.timer.loop_timer_end()
-            #    continue
 
             for observer in self.observer_threads:
                 overlayed_frame = frame.copy()
@@ -167,8 +140,6 @@ class Doorbot( Thread ):
 
 def main():
 
-    global logger
-
     parser = argparse.ArgumentParser()
 
     verbosity_grp = parser.add_mutually_exclusive_group()
@@ -188,16 +159,16 @@ def main():
 
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
-        logging.getLogger( 'doorbot.run' ).setLevel( logging.INFO )
-        logging.getLogger( 'doorbot.process' ).setLevel( logging.WARNING )
-        logging.getLogger( 'camera.process' ).setLevel( logging.WARNING )
+        #logging.getLogger( 'doorbot.run' ).setLevel( logging.INFO )
+        #logging.getLogger( 'doorbot.process' ).setLevel( logging.WARNING )
+        #logging.getLogger( 'camera.process' ).setLevel( logging.WARNING )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
     else:
         logging.basicConfig( level=logging.INFO )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
-    logger = logging.getLogger( 'main' )
+    #logger = logging.getLogger( 'main' )
 
     app = Doorbot( args.config )
 
@@ -205,7 +176,7 @@ def main():
     app.join()
 
 if '__main__' == __name__:
-    try:
-        main()
-    except KeyboardInterrupt as e:
-        logger.info( 'quitting on ctrl-c' )
+    #try:
+    main()
+    #except KeyboardInterrupt as e:
+    #    logger.info( 'quitting on ctrl-c' )

@@ -60,6 +60,8 @@ class ReserverHandler( BaseHTTPRequestHandler ):
         self.server.logger.info( 'serving stream to client %s (thread %d)',
             client_addr, threading.get_ident() )
 
+        jpg = None
+
         while self.server.thread.running:
             self.server.thread.timer.loop_timer_start()
             jpg = None
@@ -70,13 +72,10 @@ class ReserverHandler( BaseHTTPRequestHandler ):
                 continue
 
             # TODO: Superfluous copy.
-            frame = None
+        
             with self.server.thread._frame.get_frame() as orig_frame:
-                frame = orig_frame.copy()
+                jpg = image_to_jpeg( orig_frame )
 
-            #self.server.thread.draw_overlay( frame )
-
-            jpg = image_to_jpeg( frame )
             try:
                 self.wfile.write( '--jpgboundary'.encode( 'utf-8' ) )
                 self.send_header( 'Content-type', 'image/jpeg' )
