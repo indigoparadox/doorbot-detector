@@ -17,7 +17,7 @@ class FakeCamera( BaseProvider ):
     def random_image( self, width, height ):
 
         image_out = numpy.random.randint(
-            255, size=( width, height, 3), dtype=numpy.uint8 )
+            255, size=( height, width, 3), dtype=numpy.uint8 )
 
         return image_out
 

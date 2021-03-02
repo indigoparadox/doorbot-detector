@@ -44,7 +44,7 @@ class MotionDetector( Detector ):
         logger.debug( 'threshold: %d', self.threshold )
         logger.debug( 'blur: %d', self.blur )
 
-    def handle_movement( self, frame, rect_x, rect_y, rect_w, rect_h ):
+    def handle_movement( self, frame : numpy.ndarray, rect_x, rect_y, rect_w, rect_h ):
 
         ''' Motion frames were found. '''
 
@@ -71,7 +71,7 @@ class MotionDetector( Detector ):
             return DetectionEvent(
                 'movement', (rect_w, rect_h), (rect_x, rect_y), frame )
 
-    def detect( self, frame ):
+    def detect( self, frame : numpy.ndarray ):
 
         # Convert to foreground mask, close gaps, remove noise.
         fg_mask = self.back_sub.apply( frame )

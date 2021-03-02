@@ -64,7 +64,9 @@ class Doorbot( Thread ):
             overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
             self.overlay_thread.add_overlay( overlay )
 
-        self.camera = module_configs['cameras'][0]['module'].PLUGIN_CLASS( **module_configs['cameras'][0] )
+        self.camera = \
+            module_configs['cameras'][0]['module'].PLUGIN_CLASS(
+                **module_configs['cameras'][0] )
 
     def notify( self, subject, message, has_frame, frame=None ):
         for notifier in self.notifiers:
@@ -123,7 +125,7 @@ class Doorbot( Thread ):
             event = self.detectors[0].detect( frame )
             if event and 'movement' == event.event_type:
                 for capturer in self.capturers:
-                    capturer.handle_motion_frame( frame, self.camera.width, self.camera.height )
+                    capturer.handle_motion_frame( frame )
 
                 # TODO: Send notifier w/ summary of current objects.
                 # TODO: Make this summary retained.
@@ -134,7 +136,7 @@ class Doorbot( Thread ):
             else:
                 # No motion frames were found, digest capture pipeline.
                 for capturer in self.capturers:
-                    capturer.finalize_motion( frame, self.camera.width, self.camera.height )
+                    capturer.finalize_motion( frame )
 
             self.timer.loop_timer_end()
 
