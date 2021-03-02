@@ -3,6 +3,7 @@ import logging
 import os
 import multiprocessing
 import shutil
+import time
 from queue import Empty
 from ftplib import FTP, FTP_TLS
 from ftplib import all_errors as FTPExceptions
@@ -13,16 +14,17 @@ class Capture( object ):
 
     ''' Abstract module for capturing and storing frames for archival. '''
 
-    def __init__( self, **kwargs ):
+    def __init__( self, frame_type : type, **kwargs ):
 
         self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
             '%Y-%m-%d-%H-%M-%S-%f'
 
         self.capture_writer_type = lambda x, y, z, a, b, c: None
         self.capture_writer_proc_type = lambda x: None
-        self.multiproc = bool( 'multiproc' in kwargs \
-            and 'true' == kwargs['multiproc'] )
+        self.multiproc = False if 'multiproc' in kwargs \
+            and 'false' == kwargs['multiproc'] else True
         self.writer = None
+        self.frame_type = frame_type
         self.kwargs = kwargs
 
     def create_or_append_to_writer( self, frame, writer_type ):
@@ -31,7 +33,7 @@ class Capture( object ):
             writer = writer_type( timestamp,
                 frame.shape[1], frame.shape[0], **self.kwargs )
             if self.multiproc:
-                self.writer = CaptureWriterProcess( writer )
+                self.writer = CaptureWriterProcess( writer, self.frame_type )
             else:
                 self.writer = writer
 
@@ -124,25 +126,39 @@ class CaptureWriter( object ):
             ftp.storbinary( 'STOR {}'.format( dest_filename ), upload_file )
 
 class CaptureWriterProcess( multiprocessing.Process ):
-    def __init__( self, writer ):
+    def __init__( self, writer : CaptureWriter, frame_type : type ):
         super().__init__()
         self.frames = multiprocessing.Queue()
         self.writer = writer
         self.writer.process = self
         self.logger = logging.getLogger( 'capture.process' )
+        self.frame_type = frame_type
 
     def add_frame( self, frame ):
         self.frames.put_nowait( frame )
 
     def run( self ):
 
-        frame_array = []
-        try:
-            frame = self.frames.get( block=True, timeout=1.0 )
-            while isinstance( frame ):
-                self.writer.frame_array.insert( 0, frame )
+        #max_dry_hits = 10
+        #dry_hits = 0
+        kickstart = True
+        frame = None
+        while isinstance( frame, self.frame_type ) or kickstart:
+            try:
                 frame = self.frames.get( block=True, timeout=1.0 )
-        except Empty:
-            self.logger.info( 'encoder thread received %d frames', len( frame_array ) )
+                self.writer.frame_array.insert( 0, frame )
+                #dry_hits = 0
+                kickstart = False
+            except Empty:
+                #if max_dry_hits <= dry_hits:
+                break
+                #else:
+                #    time.sleep( 0.1 )
+                #    dry_hits += 1
+
+        self.logger.info( 'encoder thread received %d frames',
+            len( self.writer.frame_array ) )
+        self.frames.close()
 
         self.writer.start()
+        self.writer = None

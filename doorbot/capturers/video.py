@@ -67,7 +67,7 @@ class VideoCaptureWriter( CaptureWriter ):
 class VideoCapture( Capture ):
 
     def __init__( self, **kwargs ):
-        super().__init__( **kwargs )
+        super().__init__( numpy.ndarray, **kwargs )
 
         self.logger = logging.getLogger( 'capture.video' )
         self.logger.info( 'setting up video capture...' )
@@ -96,9 +96,10 @@ class VideoCapture( Capture ):
             self.create_or_append_to_writer( frame.copy() )
 
         # Ship the frames off to a separate thread to write out.
-        self.frames_count = 0
-        self.writer.start()
-        self.writer = None
+        if 0 < self.frames_count:
+            self.frames_count = 0
+            self.writer.start()
+            self.writer = None
 
 PLUGIN_TYPE = 'capturers'
 PLUGIN_CLASS = VideoCapture

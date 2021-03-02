@@ -1,7 +1,8 @@
 
 import logging
 import argparse
-from configparser import ConfigParser
+from configparser import ConfigParser, NoOptionError, NoSectionError
+from sys import gettrace
 from threading import Thread
 
 from doorbot.portability import image_to_jpeg
@@ -27,6 +28,12 @@ class Doorbot( Thread ):
         module_configs = load_modules( config )
 
         self.logger = logging.getLogger( 'main' )
+
+        self.grace_frames = 10
+        try:
+            self.grace_frames = config.getint( 'global', 'graceframes' )
+        except (NoSectionError, NoOptionError):
+            pass
 
         # Setup the notifier.
 
@@ -95,6 +102,7 @@ class Doorbot( Thread ):
         frame = None
         overlayed_frame = None
         event = None
+        grace_remaining = 0
 
         while self.running:
             self.timer.loop_timer_start()
@@ -123,20 +131,29 @@ class Doorbot( Thread ):
                 observer.set_frame( overlayed_frame )
 
             event = self.detectors[0].detect( frame )
-            if event and 'movement' == event.event_type:
+            if event and 'movement' == event.event_type or grace_remaining:
                 for capturer in self.capturers:
-                    capturer.handle_motion_frame( frame )
+                    try:
+                        capturer.handle_motion_frame( frame )
+                    except:
+                        grace_remaining = 0
+                        capturer.finalize_motion( frame )
 
                 # TODO: Send notifier w/ summary of current objects.
                 # TODO: Make this summary retained.
                 # TODO: Send image data.
-                self.notify( 'movement', '{} at {}'.format(
-                    event.dimensions, event.position ), True, frame=frame )
+                if event:
+                    self.notify( 'movement', '{} at {}'.format(
+                        event.dimensions, event.position ), True, frame=frame )
+
+                    grace_remaining = self.grace_frames
+                else:
+                    grace_remaining -= 1
 
             else:
                 # No motion frames were found, digest capture pipeline.
                 for capturer in self.capturers:
-                    capturer.finalize_motion( frame )
+                    capturer.finalize_motion( None )
 
             self.timer.loop_timer_end()
 
