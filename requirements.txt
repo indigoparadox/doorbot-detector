@@ -7,3 +7,6 @@ python-dateutil==2.8.1
 requests==2.25.1
 six==1.15.0
 urllib3==1.26.3
+hachoir==3.1.2
+memory-profiler==0.57.0
+memunit==0.5.2

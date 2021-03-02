@@ -1,5 +1,8 @@
 
 import random
+import tempfile
+import shutil
+from contextlib import contextmanager
 
 import numpy
 try:
@@ -31,3 +34,12 @@ class FakeCamera( BaseProvider ):
         rect_y = random.randint( 0, frame_height - rect_h )
 
         return (rect_x, rect_y, rect_w, rect_h)
+
+    @contextmanager
+    def directory( self ):
+        temp_dir_path = None
+        try:
+            temp_dir_path = tempfile.mkdtemp()
+            yield temp_dir_path
+        finally:
+            shutil.rmtree( temp_dir_path )
