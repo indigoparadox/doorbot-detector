@@ -10,3 +10,4 @@ urllib3==1.26.3
 hachoir==3.1.2
 memory-profiler==0.57.0
 memunit==0.5.2
+pyftpdlib==1.5.6
