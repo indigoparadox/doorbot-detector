@@ -1,5 +1,5 @@
 
-from configparser import ConfigParser
+from configparser import RawConfigParser
 import os
 import sys
 import unittest
@@ -28,7 +28,7 @@ class TestUtil( unittest.TestCase ):
         return super().tearDown()
 
     def test_list_modules( self ):
-        config = ConfigParser()
+        config = RawConfigParser()
         config.read( 'detector.ini' )
         parsed_config = load_modules( config )
         print( parsed_config )

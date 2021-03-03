@@ -33,6 +33,9 @@ class PhotoCaptureWriter( CaptureWriter ):
 
 class PhotoCapture( Capture ):
 
+    def __init__( self, **kwargs ):
+        super().__init__( numpy.ndarray, **kwargs )
+
     def handle_motion_frame( self, frame : numpy.ndarray ):
 
         # Individually process the last snapshot.

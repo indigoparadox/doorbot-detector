@@ -1,9 +1,15 @@
 
+from datetime import datetime
+from doorbot.capturers import Capture, CaptureWriter
 import os
 import sys
 import unittest
 import logging
 import re
+import tempfile
+import shutil
+import random
+from threading import Thread, local
 
 import memunit
 from faker import Faker
@@ -17,6 +23,7 @@ sys.path.insert( 0, os.path.dirname( os.path.dirname( __file__) ) )
 
 from doorbot.capturers.video import VideoCapture, VideoLengthException
 from doorbot.capturers.photo import PhotoCapture
+from doorbot.portability import image_to_jpeg
 from fake_camera import FakeCamera
 
 RE_DURATION = re.compile( r'^- Duration:\s*(?P<sec>[0-9]*)\s*sec(\s*(?P<ms>[0-9]*)\s*ms)?' )
@@ -30,26 +37,61 @@ class TestCapture( unittest.TestCase ):
         self.fake = Faker()
         self.fake.add_provider( FakeCamera )
 
+        self.temp_folder = tempfile.mkdtemp()
+        self.temp_upload_file_path = None
+
         self.ftp_auth = DummyAuthorizer()
-        self.ftp_auth.add_user( 'test', 'test', '/tmp' )
+        self.ftp_auth.add_user( 'test', 'test', self.temp_folder, 'elrmw' )
         self.ftp_handler = FTPHandler
         self.ftp_handler.authorizer = self.ftp_auth
-        self.ftp_server = ThreadedFTPServer( ('127.0.0.1', 50212), self.ftp_handler )
-        self.ftp_server.serve_forever( blocking=False )
+        self.ftp_server = None
+        while not self.ftp_server:
+            self.ftp_port = random.randint( 50000, 60000 )
+            try:
+                self.ftp_server = ThreadedFTPServer(
+                    ('localhost', self.ftp_port), self.ftp_handler )
+            except Exception as exc:
+                print( '{} error creating FTP server: {}; retrying...'.format(
+                    type( exc ), exc ) )
+                self.ftp_server = None
+        self.ftp_thread = Thread( target=self.ftp_server.serve_forever )
+        self.ftp_thread.start()
 
         logging.getLogger( '' ).setLevel( logging.DEBUG )
-
-        return super().setUp()
 
     def tearDown(self) -> None:
 
         self.ftp_server.close_all()
-
-        return super().tearDown()
+        shutil.rmtree( self.temp_folder )
+        if self.temp_upload_file_path:
+            os.unlink( self.temp_upload_file_path )
 
     def test_capture_upload( self ):
+        frame_jpg = image_to_jpeg( self.fake.random_image( 640, 480 ) )
+        self.temp_upload_file_path = tempfile.mktemp( suffix='.jpg' )
+        with open( self.temp_upload_file_path, 'wb' ) as temp_file:
+            temp_file.write( frame_jpg )
 
-        pass
+        nowdate = datetime.now()
+        nowstamp = nowdate.strftime( '%Y-%m-%d-%H-%M-%S-%f' )
+        ftp_path = 'ftp://test:test@localhost:{}/dev/%date%'.format( self.ftp_port )
+        print( ftp_path )
+        capturer_args = {
+            'path': ftp_path
+        }
+        capturer = CaptureWriter( nowstamp, 640, 480, **capturer_args )
+        capturer.upload_ftp( self.temp_upload_file_path )
+
+        # Verify file was uploaded correctly.
+        upload_local_dest = os.path.join(
+            self.temp_folder,
+            'dev',
+            nowdate.strftime( '%Y-%m-%d' ),
+            os.path.basename( self.temp_upload_file_path ) )
+        self.assertTrue( os.path.exists( upload_local_dest ) )
+        local_stat = os.stat( self.temp_upload_file_path )
+        remote_stat = os.stat( upload_local_dest )
+        self.assertEqual( local_stat.st_size, remote_stat.st_size )
 
     def test_capture_photo( self ):
 
@@ -101,7 +143,7 @@ class TestCapture( unittest.TestCase ):
                         capturer.handle_motion_frame( frame )
                         fc_check += 1
                         self.assertEqual( capturer.frames_count, fc_check )
-                        
+
                     except VideoLengthException as exc:
                         print( exc )
                         self.assertEqual( capturer.frames_count, 100 )
@@ -119,7 +161,7 @@ class TestCapture( unittest.TestCase ):
                     width : int = 0
                     height : int = 0
                     sec : int = 0
-                    ms : int = 0
+                    #ms : int = 0
                     video_count += 1
                     filename = os.path.join( capture_path, entry.name )
                     parser = createParser( filename )
@@ -145,5 +187,5 @@ class TestCapture( unittest.TestCase ):
                     self.assertEqual( height, 480 )
                     self.assertIn( sec, [19, 20] )
                     #self.assertEqual( ms, 190 )
-                    
+
             self.assertEqual( video_count, 10 )

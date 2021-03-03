@@ -3,10 +3,10 @@ import logging
 import time
 import threading
 import importlib
-from configparser import ConfigParser
+from configparser import RawConfigParser
 from contextlib import contextmanager
 
-def load_modules( config: ConfigParser ):
+def load_modules( config: RawConfigParser ):
 
     config_out = {
         'observers': [],

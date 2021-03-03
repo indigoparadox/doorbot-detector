@@ -6,7 +6,7 @@ import shutil
 import time
 from queue import Empty
 from ftplib import FTP, FTP_TLS
-from ftplib import all_errors as FTPExceptions
+from ftplib import all_errors, error_perm
 from urllib.parse import urlparse
 from datetime import datetime
 
@@ -54,19 +54,17 @@ class Capture( object ):
 
 class CaptureWriter( object ):
 
-    def __init__( self, timestamp, width, height, **kwargs ):
-        super().__init__()
+    def __init__( self, timestamp : str, width, height, **kwargs ):
 
-        logger = logging.getLogger('capture.video.writer.init' )
+        self.logger = logging.getLogger( 'capture.writer' )
 
         self.timestamp = timestamp
+        self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
+            '%Y-%m-%d-%H-%M-%S-%f'
         self.path = kwargs['path'] if 'path' in kwargs else '/tmp'
         self.backup_path = \
             kwargs['backuppath'] if 'backuppath' in kwargs else self.path
         self.ftp_ssl = bool( 'ftpssl' in kwargs and kwargs['ftpssl'] )
-
-        logger.debug( 'creating video writer for %s.mp4...',
-            os.path.join( self.path, self.timestamp ) )
 
         self.width = width
         self.height = height
@@ -84,41 +82,71 @@ class CaptureWriter( object ):
 
         ''' Implementation should override this and begin processing. '''
 
-        pass
-
     def upload_ftp_or_backup( self, filepath, filename, temp_dir ):
+        #try:
+        self.upload_ftp( filepath )
+        temp_dir.cleanup()
+        #except (ConnectionRefusedError,) as exc:
+        #    self.logger.error( 'ftp upload failure: %s', exc )
+        #    backup_filepath = os.path.join( self.backup_path, filename )
+        #    self.logger.info( 'moving %s to %s...', filepath, backup_filepath )
+        #    shutil.move( filepath, backup_filepath )
+        #    temp_dir.cleanup()
+
+    def login_ftp( self ) -> FTP:
+        # FTP login.
+        parsed = urlparse( self.path )
+        self.logger.info( 'logging into ftp at %s as %s...',
+            parsed.hostname, parsed.username )
+        ftp = None
+        if self.ftp_ssl:
+            ftp_class = FTP_TLS
+        else:
+            ftp_class = FTP
+        ftp = ftp_class()
+        connect_args = { 'host': parsed.hostname }
+        if parsed.port:
+            connect_args['port'] = parsed.port
+        ftp.connect( **connect_args )
+        ftp.login( user=parsed.username, passwd=parsed.password )
+        if self.ftp_ssl:
+            ftp.prot_p()
+        return ftp
+
+    def chdir_ftp( self, ftp : FTP, path ):
+
+        if not path:
+            return
+
         try:
-            self.upload_ftp( filepath )
-            temp_dir.cleanup()
-        except Exception as exc:
-            self.logger.error( 'ftp upload failure: %s', exc )
-            backup_filepath = os.path.join( self.backup_path, filename )
-            self.logger.info( 'moving %s to %s...', filepath, backup_filepath )
-            shutil.move( filepath, backup_filepath )
-            temp_dir.cleanup()
+            ftp.cwd( path )
+        except error_perm:
+            parent_path = os.path.dirname( path )
+            self.chdir_ftp( ftp, parent_path )
+            self.logger.info( 'creating missing remote directory: %s', path )
+            try:
+                ftp.mkd( path )
+            except error_perm:
+                pass
+            ftp.cwd( path )
 
     def upload_ftp( self, filepath ):
 
         ''' Upload the given file to the FTP server configured in the
         application configuration (path under [videocap]). '''
 
-        logger = logging.getLogger( 'capture.video.writer.ftp' )
+        ftp = self.login_ftp()
 
-        # Login and change to dest dir.
+        # Tokenize FTP CWD path and create missing directories.
         parsed = urlparse( self.path )
-        logger.info( 'logging into ftp at %s as %s...',
-            parsed.hostname, parsed.username )
-        ftp = None
-        if self.ftp_ssl:
-            ftp = FTP_TLS( host=parsed.hostname )
-        else:
-            ftp = FTP( host=parsed.hostname )
-        ftp.login( user=parsed.username, passwd=parsed.password )
-        if self.ftp_ssl:
-            ftp.prot_p()
-        ftp.cwd( parsed.path )
+        cwd_path = parsed.path
+        datestamp = datetime.strftime(
+            datetime.strptime( self.timestamp, self.ts_format ), '%Y-%m-%d' )
+        cwd_path = cwd_path.replace( '%date%', datestamp )
 
-        logger.info( 'uploading %s...', filepath )
+        self.chdir_ftp( ftp, cwd_path )
+
+        self.logger.info( 'uploading %s to %s...', filepath, cwd_path )
 
         # Upload the file.
         with open( filepath, 'rb' ) as upload_file:
@@ -139,22 +167,15 @@ class CaptureWriterProcess( multiprocessing.Process ):
 
     def run( self ):
 
-        #max_dry_hits = 10
-        #dry_hits = 0
         kickstart = True
         frame = None
         while isinstance( frame, self.frame_type ) or kickstart:
             try:
                 frame = self.frames.get( block=True, timeout=1.0 )
                 self.writer.frame_array.insert( 0, frame )
-                #dry_hits = 0
                 kickstart = False
             except Empty:
-                #if max_dry_hits <= dry_hits:
                 break
-                #else:
-                #    time.sleep( 0.1 )
-                #    dry_hits += 1
 
         self.logger.info( 'encoder thread received %d frames',
             len( self.writer.frame_array ) )

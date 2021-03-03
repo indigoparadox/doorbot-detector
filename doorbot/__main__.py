@@ -1,7 +1,7 @@
 
 import logging
 import argparse
-from configparser import ConfigParser, NoOptionError, NoSectionError
+from configparser import RawConfigParser, NoOptionError, NoSectionError
 from sys import gettrace
 from threading import Thread
 
@@ -23,7 +23,7 @@ class Doorbot( Thread ):
         self.timer = FPSTimer( self, **kwargs )
         self.stale_frames = 0
 
-        config = ConfigParser()
+        config = RawConfigParser()
         config.read( config_path )
         module_configs = load_modules( config )
 
