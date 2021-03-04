@@ -5,7 +5,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 
 from doorbot.portability import image_to_jpeg
-from doorbot.observers import ObserverThread
+from doorbot.observers import ObserverProc
+from doorbot.util import FPSTimer
 
 class ReserverHandler( BaseHTTPRequestHandler ):
 
@@ -23,19 +24,14 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
     def serve_jpeg( self ):
 
-        if not self.server.thread._frame.frame_ready:
+        if not self.server.proc.frame_ready:
             self.server.logger.error( 'frame not ready' )
             self.send_response( 500 )
             return
 
-        # TODO: Superfluous copy.
-        frame = None
-        with self.server.thread._frame.get_frame() as orig_frame:
-            frame = orig_frame.copy()
-
-        #self.server.thread.draw_overlay( frame )
-
-        jpg = image_to_jpeg( frame )
+        jpg = None
+        with self.server.proc.get_frame() as orig_frame:
+            jpg = image_to_jpeg( orig_frame )
 
         self.send_response( 200 )
         self.send_header( 'Content-type', 'image/jpeg' )
@@ -62,18 +58,17 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
         jpg = None
 
-        while self.server.thread.running:
-            self.server.thread.timer.loop_timer_start()
+        timer = FPSTimer( self )
+        while self.server.proc.running:
+            timer.loop_timer_start()
             jpg = None
 
-            if not self.server.thread._frame.frame_ready:
+            if not self.server.proc.frame_ready():
                 self.server.logger.debug( 'waiting for frame...' )
-                self.server.thread.timer.loop_timer_end()
+                timer.loop_timer_end()
                 continue
 
-            # TODO: Superfluous copy.
-        
-            with self.server.thread._frame.get_frame() as orig_frame:
+            with self.server.proc.get_frame() as orig_frame:
                 jpg = image_to_jpeg( orig_frame )
 
             try:
@@ -82,7 +77,7 @@ class ReserverHandler( BaseHTTPRequestHandler ):
                 self.send_header( 'Content-length', '{}'.format( len( jpg ) ) )
                 self.end_headers()
                 self.wfile.write( jpg )
-                self.server.thread.timer.loop_timer_end()
+                timer.loop_timer_end()
             except BrokenPipeError:
                 self.server.logger.info( 'client %s disconnected (thread %d)',
                     client_addr, threading.get_ident() )
@@ -98,9 +93,9 @@ class Reserver( ThreadingMixIn, HTTPServer ):
         self.daemon_threads = True
         self.logger = logging.getLogger( 'observer.reserver' )
 
-        self.thread = thread
+        self.proc = thread
 
-class ReserverThread( ObserverThread ):
+class ReserverProc( ObserverProc ):
 
     def __init__( self, **kwargs ):
 
@@ -109,16 +104,20 @@ class ReserverThread( ObserverThread ):
         #logger.debug( 'setting up reserver...' )
 
         super().__init__( **kwargs )
-        hostname = kwargs['listen'] if 'listen' in kwargs else '0.0.0.0'
-        port = int( kwargs['port'] ) if 'port' in kwargs else 8888
-        self.server = Reserver( self, (hostname, port), ReserverHandler )
+        self._hostname = kwargs['listen'] if 'listen' in kwargs else '0.0.0.0'
+        self._port = int( kwargs['port'] ) if 'port' in kwargs else 8888
+        self._server : Reserver
 
-    def run( self ):
+    def loop( self ):
 
         #logger = logging.getLogger( 'reserver.run' )
         #logger.debug( 'starting reserver...' )
 
-        self.server.serve_forever()
+        self.logger.info( 'setting up reserver on port %d...', self._port )
+        self._server = Reserver( self, (self._hostname, self._port), ReserverHandler )
 
-PLUGIN_CLASS = ReserverThread
+        self._server.serve_forever()
+        self.running = False
+
+PLUGIN_CLASS = ReserverProc
 PLUGIN_TYPE = 'observers'

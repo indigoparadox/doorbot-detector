@@ -1,4 +1,5 @@
 
+import numpy
 try:
     from cv2 import cv2
 except ImportError:
@@ -10,3 +11,6 @@ def image_to_jpeg( frame ):
         return jpg.tobytes()
     else:
         return {}
+
+def is_frame( frame ):
+    return isinstance( frame, numpy.ndarray )

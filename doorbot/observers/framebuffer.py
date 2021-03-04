@@ -1,15 +1,14 @@
 
-from doorbot.cameras.rtsp import PLUGIN_CLASS, PLUGIN_TYPE
 import logging
 
-from doorbot.observers import ObserverThread
+from doorbot.observers import ObserverProc
 
 try:
     from cv2 import cv2
 except ImportError:
     import cv2
 
-class FramebufferThread( ObserverThread ):
+class FramebufferProc( ObserverProc ):
 
     def __init__( self, **kwargs ):
 
@@ -23,7 +22,7 @@ class FramebufferThread( ObserverThread ):
         self.width = int( kwargs['width'] ) if 'width' in kwargs else None
         self.height = int( kwargs['height'] ) if 'height' in kwargs else None
 
-    def run( self ):
+    def loop( self ):
 
         frame = None
 
@@ -53,4 +52,4 @@ class FramebufferThread( ObserverThread ):
             self.timer.loop_timer_end()
 
 PLUGIN_TYPE = 'observers'
-PLUGIN_CLASS = FramebufferThread
+PLUGIN_CLASS = FramebufferProc

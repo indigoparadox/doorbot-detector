@@ -53,11 +53,11 @@ class Doorbot( Thread ):
 
         # Setup the detector and observer satellite threads.
 
-        self.observer_threads = []
+        self.observer_procs= []
 
         for observer_cfg in module_configs['observers']:
             observer = observer_cfg['module'].PLUGIN_CLASS( **observer_cfg )
-            self.observer_threads.append( observer )
+            self.observer_procs.append( observer )
 
         self.detectors = []
 
@@ -96,8 +96,8 @@ class Doorbot( Thread ):
 
         self.overlay_thread.start()
 
-        for thd in self.observer_threads:
-            thd.start()
+        for proc in self.observer_procs:
+            proc.start()
 
         frame = None
         overlayed_frame = None
@@ -125,7 +125,7 @@ class Doorbot( Thread ):
             # The camera provides a copy while using the proper locks.
             frame = self.camera.frame
 
-            for observer in self.observer_threads:
+            for observer in self.observer_procs:
                 overlayed_frame = frame.copy()
                 overlayed_frame = self.overlay_thread.draw( overlayed_frame, **observer.kwargs )
                 observer.set_frame( overlayed_frame )
