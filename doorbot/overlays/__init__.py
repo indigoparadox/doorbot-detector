@@ -1,7 +1,7 @@
 
 import threading
-import logging
 import time
+import re
 
 class Overlays( threading.Thread ):
 
@@ -12,6 +12,7 @@ class Overlays( threading.Thread ):
         self.highlights = {}
         self.daemon = True
         self.refresh = kwargs['refresh'] if 'refresh' in kwargs else 5
+        #self.filter = re.compile( r'^[a-zA-Z0-9.></%$:#@&*()?_\-=+! ]*' )
 
     def add_overlay( self, overlay ):
         overlay.master = self
@@ -68,6 +69,8 @@ class Overlays( threading.Thread ):
         origin = overlay_coords
         for line in text:
             line = self.tokenize( line )
+            #line = self.filter.sub( '', line )
+            line = ''.join( c for c in line if c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .></%$,:#@&*()?_-=+!' )
             line = self.text( frame, line, origin, **kwargs )
             # TODO: Measure text line for Y-height.
             origin = (origin[0], origin[1] + overlay_line_height)
