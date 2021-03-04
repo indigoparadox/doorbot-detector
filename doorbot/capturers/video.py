@@ -1,8 +1,6 @@
 
-from doorbot.util import FrameLock
 import os
 import logging
-from datetime import datetime
 from tempfile import TemporaryDirectory
 
 import numpy
