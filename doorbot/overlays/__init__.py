@@ -12,7 +12,6 @@ class Overlays( threading.Thread ):
         self.highlights = {}
         self.daemon = True
         self.refresh = kwargs['refresh'] if 'refresh' in kwargs else 5
-        #self.filter = re.compile( r'^[a-zA-Z0-9.></%$:#@&*()?_\-=+! ]*' )
 
     def add_overlay( self, overlay ):
         overlay.master = self
@@ -52,8 +51,6 @@ class Overlays( threading.Thread ):
 
         # Handle general kwargs.
         overlay_text = kwargs['overlay'] if 'overlay' in kwargs else ''
-        #self.highlights = kwargs['highlight'].split( ',' ) \
-        #    if 'highlight' in kwargs else []
         overlay_coords = \
             tuple( [int( x ) for x in kwargs['overlaycoords'].split( ',' )] ) \
             if 'overlaycoords' in kwargs else (10, 10)
@@ -70,7 +67,9 @@ class Overlays( threading.Thread ):
         for line in text:
             line = self.tokenize( line )
             #line = self.filter.sub( '', line )
-            line = ''.join( c for c in line if c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .></%$,:#@&*()?_-=+!' )
+            line = ''.join( c for c in line if c in \
+                'abcdefghijklmnopqrstuvwxyz' + \
+                'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .></%$,:#@&*()?_-=+!' )
             line = self.text( frame, line, origin, **kwargs )
             # TODO: Measure text line for Y-height.
             origin = (origin[0], origin[1] + overlay_line_height)

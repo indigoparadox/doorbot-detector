@@ -16,7 +16,7 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
         if self.path.endswith( '.jpg' ):
             return self.serve_jpeg()
-        else:
+        elif self.path.endswith( '.mjpeg' ):
             return self.serve_mjpeg()
 
     def log_message( self, format, *args ):

@@ -21,6 +21,10 @@ class VideoCaptureWriter( CaptureWriter ):
 
         self.logger = logging.getLogger('capture.video' )
 
+        self.fps = float( kwargs['fps'] ) if 'fps' in kwargs else 15.0
+        self.fourcc = kwargs['fourcc'] if 'fourcc' in kwargs else 'mp4v'
+        self.container = kwargs['container'] if 'container' in kwargs else 'mp4'
+
         self.logger.debug( 'creating video writer for %s.mp4...',
             os.path.join( self.path, self.timestamp ) )
 
@@ -34,7 +38,7 @@ class VideoCaptureWriter( CaptureWriter ):
         # Determine path for saved video/temporary video.
         filename = '{}.{}'.format( self.timestamp, self.container )
         filepath = filename
-        if self.path.startswith( 'ftp:' ):
+        if self.path.startswith( 'ftp:' ) or self.path.startswith( 'ftps:' ):
             filepath = os.path.join( temp_dir.name, filename )
         else:
             filepath = os.path.join( self.path, filename )
@@ -57,7 +61,7 @@ class VideoCaptureWriter( CaptureWriter ):
         encoder.release()
 
         # Try to upload file if remote path specified.
-        if self.path.startswith( 'ftp:' ):
+        if self.path.startswith( 'ftp:' ) or self.path.startswith( 'ftps:' ):
             self.upload_ftp_or_backup( filepath, filename, temp_dir )
 
         self.logger.info( 'encoding %s completed', filename )

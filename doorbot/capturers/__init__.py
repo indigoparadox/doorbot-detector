@@ -63,14 +63,12 @@ class CaptureWriter( object ):
             '%Y-%m-%d-%H-%M-%S-%f'
         self.path = kwargs['path'] if 'path' in kwargs else '/tmp'
         self.backup_path = \
-            kwargs['backuppath'] if 'backuppath' in kwargs else self.path
-        self.ftp_ssl = bool( 'ftpssl' in kwargs and kwargs['ftpssl'] )
+            kwargs['backuppath'] if 'backuppath' in kwargs else None
+        self.ftp_ssl = bool( 'path' in kwargs and \
+            kwargs['path'].startswith( 'ftps://' ) )
 
         self.width = width
         self.height = height
-        self.fps = float( kwargs['fps'] ) if 'fps' in kwargs else 15.0
-        self.fourcc = kwargs['fourcc'] if 'fourcc' in kwargs else 'mp4v'
-        self.container = kwargs['container'] if 'container' in kwargs else 'mp4'
 
         self.frame_array = []
         self.process = None
@@ -83,15 +81,15 @@ class CaptureWriter( object ):
         ''' Implementation should override this and begin processing. '''
 
     def upload_ftp_or_backup( self, filepath, filename, temp_dir ):
-        #try:
-        self.upload_ftp( filepath )
+        try:
+            self.upload_ftp( filepath )
+        except (ConnectionRefusedError,) as exc:
+            self.logger.error( 'ftp upload failure: %s', exc )
+            if self.backup_path:
+                backup_filepath = os.path.join( self.backup_path, filename )
+                self.logger.info( 'moving %s to %s...', filepath, backup_filepath )
+                shutil.move( filepath, backup_filepath )
         temp_dir.cleanup()
-        #except (ConnectionRefusedError,) as exc:
-        #    self.logger.error( 'ftp upload failure: %s', exc )
-        #    backup_filepath = os.path.join( self.backup_path, filename )
-        #    self.logger.info( 'moving %s to %s...', filepath, backup_filepath )
-        #    shutil.move( filepath, backup_filepath )
-        #    temp_dir.cleanup()
 
     def login_ftp( self ) -> FTP:
         # FTP login.
