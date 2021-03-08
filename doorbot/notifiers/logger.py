@@ -7,7 +7,7 @@ class LoggerNotifier( Notifier ):
     def __init__( self, **kwargs ):
 
         super().__init__( **kwargs )
-        
+
         self.logger = logging.getLogger( 'detector.run.movement' )
 
     def send( self, subject, message ):
