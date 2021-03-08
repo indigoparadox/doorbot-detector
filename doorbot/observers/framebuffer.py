@@ -29,14 +29,14 @@ class FramebufferProc( ObserverProc ):
         while self.running:
             self.timer.loop_timer_start()
 
-            if not self._frame.frame_ready:
+            if not self.frame_ready():
                 self.logger.debug( 'waiting for frame...' )
                 self.timer.loop_timer_end()
                 continue
 
             with open( self.path, 'rb+' ) as framebuffer:
                 frame = None
-                with self._frame.get_frame() as orig_frame:
+                with self.get_frame() as orig_frame:
                     frame = orig_frame.copy()
 
                 # Process the image for the framebuffer.
@@ -44,8 +44,6 @@ class FramebufferProc( ObserverProc ):
                 if None != self.width and None != self.height:
                     frame = cv2.resize(
                         frame, (self.width, self.height) )
-
-                #self.draw_overlay( frame )
 
                 framebuffer.write( frame )
 
