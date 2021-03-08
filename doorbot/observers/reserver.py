@@ -14,9 +14,11 @@ class ReserverHandler( BaseHTTPRequestHandler ):
 
         self.server.logger.debug( 'connection from %s...', self.address_string() )
 
-        if self.path.endswith( '.jpg' ):
+        if self.path.endswith( '.jpg' ) or \
+        self.path.endswith( '.jpeg' ):
             return self.serve_jpeg()
-        elif self.path.endswith( '.mjpeg' ):
+        elif self.path.endswith( '.mjpg' ) or \
+        self.path.endswith( '.mjpeg' ):
             return self.serve_mjpeg()
 
     def log_message( self, format, *args ):
