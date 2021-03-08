@@ -75,7 +75,7 @@ class TrayMenu( object ):
 
     def add_item( self, key, label, callback, *args, **kwargs ):
         if interface == INTERFACE_GTK:
-            self._items[key] = Gtk.MenuItem( label ) 
+            self._items[key] = Gtk.MenuItem( label )
             self._items[key].connect( 'activate', callback, *args, **kwargs )
             self._menu.append( self._items[key] )
             self._items[key].show()
@@ -89,7 +89,7 @@ class TrayMenu( object ):
 
     def add_option_item( self, key, label, checked, callback, *args, **kwargs ):
         if interface == INTERFACE_GTK:
-            self._items[key] = Gtk.CheckMenuItem( label ) 
+            self._items[key] = Gtk.CheckMenuItem( label )
             self._items[key].connect( 'activate', callback, *args, **kwargs )
             self._menu.append( self._items[key] )
             self._items[key].show()
@@ -133,6 +133,9 @@ class TrayIcon( threading.Thread ):
 
         self.daemon = True
 
+        icon_path = os.path.join( os.path.dirname( os.path.abspath( __file__ ) ),
+            '{}.ico'.format( icon ) )
+
         if interface == INTERFACE_GTK:
             category = \
                 getattr( appindicator.IndicatorCategory, kwargs['category'] ) \
@@ -142,16 +145,14 @@ class TrayIcon( threading.Thread ):
             self.logger.debug( 'creating icon %s with image %s...',
                 iid, icon )
 
-            self.icon = appindicator.Indicator.new( iid, icon, category )
+            self.icon = appindicator.Indicator.new( iid, icon_path, category )
             self.icon.set_status( appindicator.IndicatorStatus.ACTIVE )
 
             if 'attention_icon' in kwargs:
                 self.icon.set_attention_icon( kwargs['attention_icon'] )
 
         elif interface == INTERFACE_WIN32:
-            self.ni = NotificationIcon(
-                os.path.join( os.path.dirname( os.path.abspath( __file__ ) ),
-                '..', '{}.ico'.format( icon ) ), iid )
+            self.ni = NotificationIcon( icon_path, iid )
 
         else:
             raise Exception( 'not implemented' )
