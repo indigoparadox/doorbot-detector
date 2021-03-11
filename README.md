@@ -209,25 +209,15 @@ These items can be included in any notifier's configuration stanza. They only af
 
 ### \[doorbot.notifiers.mqtt\]
 
-* **host**
+This notifier sends action notifications to an MQTT server (not included; we recommend [Mosquitto(https://mosquitto.org)]).
 
-  The address or hostname of the MQTT server.
+* **url**
 
-* **port**
-
-  The port on which to connect to the MQTT server.
+  The URL at which to connect to the MQTT server (e.g. mqtt://username:password@mqtt server:port/topic). If the path starts with mqtts://, then MQTT over TLS will be used.
 
 * **uid**
 
-  UID to use when connecting to the MQTT server. This should be unique on your MQTT server.
-
-* **topic**
-
-  Topic to publish activity notifications to.
-
-* **ssl** (optional, default "false")
-
-  "true" if TLS should be used to connect to the MQTT server, "false" otherwise.
+  UID to use when connecting to the MQTT server. This should be unique on your MQTT server. Please note that this is distinct from the username and password used to authenticate to the MQTT server (which should be specified in the URL if needed).
 
 * **ca**
 
@@ -256,6 +246,10 @@ These items can be included in any notifier's configuration stanza. They only af
 * **winautohidedelay**
 
   For the peephole windowed client. If winautohide is enabled, this should be set to the number of milliseconds (1000ths of a second) of inactivity after which the window will hide itself.
+
+### \[doorbot.notifiers.logger\]
+
+This notifier publishes action notifications to a log. By default, log messages are emitted to stdout (similar to other log messages).
 
 ## Overlays
 

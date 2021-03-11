@@ -2,6 +2,8 @@
 import ssl
 import time
 import logging
+from urllib import parse
+from urllib.parse import urlparse
 
 from paho.mqtt import client as mqtt_client
 
@@ -18,19 +20,27 @@ class MQTTNotifier( Notifier ):
             and 'true' == kwargs['snapshots'] else False
         self.snaps_retain = True if 'snapsretain' in kwargs \
             and 'true' == kwargs['snapsretain'] else False
-        self.topic = kwargs['topic']
+
+        parsed_url = urlparse( kwargs['url'] )
+
+        self.topic = parsed_url.path[1:] # Strip initial /.
         self.mqtt = mqtt_client.Client(
             kwargs['uid'], True, None, mqtt_client.MQTTv31 )
         self.mqtt.loop_start()
         if 'logger' in kwargs and kwargs['logger'] == 'true':
             self.mqtt.enable_logger()
-        if 'ssl' in kwargs and kwargs['ssl'] == 'true':
+        if 'mqtts' == parsed_url.scheme:
             self.mqtt.tls_set(
                 kwargs['ca'], tls_version=ssl.PROTOCOL_TLSv1_2 )
+        elif 'mqtt' != parsed_url.scheme:
+            raise ValueError( 'invalid MQTT scheme specified in url' ) 
         self.mqtt.on_connect = self.on_connected
         self.logger.info( 'connecting to MQTT at %s:%d...',
-            kwargs['host'], int( kwargs['port'] ) )
-        self.mqtt.connect( kwargs['host'], int( kwargs['port'] ) )
+            parsed_url.hostname, parsed_url.port )
+        if parsed_url.username:
+            self.mqtt.username_pw_set(
+                parsed_url.username, parsed_url.password )
+        self.mqtt.connect( parsed_url.hostname, parsed_url.port )
 
     def send( self, subject, message ):
         topic = '{}/{}'.format( self.topic, subject )

@@ -4,7 +4,7 @@ graceframes=10
 
 [doorbot.cameras.rtsp]
 enable=true
-url=
+url=rtsp://user:password@camera.example.com/stream
 fps=5.0
 reportframes=100
 
@@ -53,20 +53,17 @@ enable=true
 
 [doorbot.overlays.weather]
 enable=false
-url=
+url=http://weather.example.com/current.json
 refresh=300
 format=<outTemp> <humidity>, wind <windSpeed>, rain <rainRate>
 
 [doorbot.notifiers.mqtt]
 enable=false
-host=
-port=8883
-ssl=true
+url=mqtt://mqtt.example.com:1883/topic
 logger=false
 snapshots=true
 snapsretain=true
 ca=
-topic=
 uid=
 snapsize=320,240
 overlaycoords=10,30

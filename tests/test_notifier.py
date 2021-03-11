@@ -40,7 +40,7 @@ class TestNotifier( unittest.TestCase ):
             frame_jpg = image_to_jpeg( frame )
 
             notifier = doorbot.notifiers.mqtt.MQTTNotifier(
-                topic='testtopic', uid='testuid', host='localhost', port=1883 )
+                uid='testuid', url='mqtt://localhost:1883/testtopic' )
 
             notifier.send( 'Test Subject', 'Test Message' )
             notifier.snapshot( 'Test Snapshot', frame_jpg )
