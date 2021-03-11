@@ -4,7 +4,6 @@
 
 * [Doorbot](#doorbot)
   * [Roadmap](#roadmap)
-  * [Global Configuration](#global-configuration-global)
 * [Modules](#modules)
   * [Cameras](#cameras)
   * [Detectors](#cameras)
@@ -20,12 +19,6 @@ Doorbot is designed to run on a server (e.g. a Raspberry Pi) and use OpenCV to f
 Doorbot also includes facilities for providing an overlay e.g. from JSON data, static text, or the current time (and maybe others later). The resulting image can also be sent directly to the server's framebuffer, if it has a display.
 
 Snapshots or video can be captured when motion is detected, and then stored locally or uploaded via FTP. As mentioned above, they can also be sent via MQTT. A simple desktop viewer is included for receiving said snapshots in real-time.
-
-## Global Configuration \[global\]
-
-* **graceframes** (optional, default 10)
-
-  The number of frames to wait before stopping a capture. This can turn what might normally be many small captures due to motion into a continuous video.
 
 # Modules
 
@@ -134,6 +127,10 @@ This capturer captures activity events into video files.
 * **maxframes** (optional, default 100)
 
   Number of frames on which video files should be split. This prevents memory consumption from becoming too high at the expense of more numerous video capture files.
+
+* **graceframes** (optional, default 10)
+
+  The number of frames to wait before stopping a capture. This can turn what might normally be many small captures due to motion into a continuous video.
 
 ### \[doorbot.capturers.photo\]
 

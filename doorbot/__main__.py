@@ -1,11 +1,10 @@
 
 import logging
 import argparse
-from configparser import RawConfigParser, NoOptionError, NoSectionError
-from sys import gettrace
+from configparser import RawConfigParser
 from threading import Thread
 
-from doorbot.portability import image_to_jpeg
+from doorbot.portability import image_to_jpeg, is_frame
 from doorbot.overlays.opencv import OpenCVOverlays
 from doorbot.util import FPSTimer, load_modules
 
@@ -28,12 +27,6 @@ class Doorbot( Thread ):
         module_configs = load_modules( config )
 
         self.logger = logging.getLogger( 'main' )
-
-        self.grace_frames = 10
-        try:
-            self.grace_frames = config.getint( 'global', 'graceframes' )
-        except (NoSectionError, NoOptionError):
-            pass
 
         # Setup the notifier.
 
@@ -85,6 +78,19 @@ class Doorbot( Thread ):
                 jpg = image_to_jpeg( overlayed_frame )
                 notifier.snapshot( 'snapshot/{}'.format( subject ), jpg )
 
+    def capture( self, frame ):
+        for capturer in self.capturers:
+            if is_frame( frame ):
+                overlayed_frame = frame.copy()
+                overlayed_frame = \
+                    self.overlay_thread.draw(
+                        overlayed_frame, **capturer.kwargs )
+                capturer.handle_motion_frame( overlayed_frame )
+            else:
+                # We get passed "None" if we just want to update capturer
+                # grace frames, etc.
+                capturer.handle_motion_frame( None )
+
     def run( self ):
 
         ''' Main loop for detection thread. Dispatch relevant messages to other
@@ -102,7 +108,6 @@ class Doorbot( Thread ):
         frame = None
         overlayed_frame = None
         event = None
-        grace_remaining = 0
 
         while self.running:
             self.timer.loop_timer_start()
@@ -127,33 +132,19 @@ class Doorbot( Thread ):
 
             for observer in self.observer_procs:
                 overlayed_frame = frame.copy()
-                overlayed_frame = self.overlay_thread.draw( overlayed_frame, **observer.kwargs )
+                overlayed_frame = self.overlay_thread.draw(
+                    overlayed_frame, **observer.kwargs )
                 observer.set_frame( overlayed_frame )
 
             event = self.detectors[0].detect( frame )
-            if event and 'movement' == event.event_type or grace_remaining:
-                for capturer in self.capturers:
-                    try:
-                        capturer.handle_motion_frame( frame )
-                    except:
-                        grace_remaining = 0
-                        capturer.finalize_motion( frame )
-
-                # TODO: Send notifier w/ summary of current objects.
-                # TODO: Make this summary retained.
-                # TODO: Send image data.
-                if event:
-                    self.notify( 'movement', '{} at {}'.format(
-                        event.dimensions, event.position ), True, frame=frame )
-
-                    grace_remaining = self.grace_frames
-                else:
-                    grace_remaining -= 1
-
+            if event and 'movement' == event.event_type:
+                self.capture( frame )
+                self.notify( 'movement', '{} at {}'.format(
+                    event.dimensions, event.position ), True, frame=frame )
             else:
                 # No motion frames were found, digest capture pipeline.
                 for capturer in self.capturers:
-                    capturer.finalize_motion( None )
+                    capturer.capture( None )
 
             self.timer.loop_timer_end()
 

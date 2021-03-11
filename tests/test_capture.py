@@ -21,7 +21,7 @@ from hachoir.metadata import extractMetadata
 
 sys.path.insert( 0, os.path.dirname( os.path.dirname( __file__) ) )
 
-from doorbot.capturers.video import VideoCapture, VideoLengthException
+from doorbot.capturers.video import VideoCapture
 from doorbot.capturers.photo import PhotoCapture
 from doorbot.portability import image_to_jpeg
 from fake_camera import FakeCamera
@@ -138,17 +138,12 @@ class TestCapture( unittest.TestCase ):
                 self.assertEqual( capturer.frames_count, 0 )
                 fc_check = 0
                 for j in range( 0, 200 ):
-                    try:
-                        frame = self.fake.random_image( 640, 480 )
-                        capturer.handle_motion_frame( frame )
-                        fc_check += 1
-                        self.assertEqual( capturer.frames_count, fc_check )
-
-                    except VideoLengthException as exc:
-                        print( exc )
-                        self.assertEqual( capturer.frames_count, 100 )
-                        capturer.finalize_motion( frame )
+                    frame = self.fake.random_image( 640, 480 )
+                    capturer.handle_motion_frame( frame )
+                    fc_check += 1
+                    if fc_check > 100:
                         fc_check = 0
+                    else:
                         self.assertEqual( capturer.frames_count, fc_check )
 
                 capturer.finalize_motion( None )

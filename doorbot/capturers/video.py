@@ -10,10 +10,7 @@ try:
 except ImportError:
     import cv2
 
-from doorbot.capturers import Capture, CaptureWriter, CaptureWriterProcess
-
-class VideoLengthException( Exception ):
-    pass
+from doorbot.capturers import Capture, CaptureWriter
 
 class VideoCaptureWriter( CaptureWriter ):
     def __init__( self, timestamp, width, height, **kwargs ):
@@ -78,18 +75,24 @@ class VideoCapture( Capture ):
             if 'maxframes' in kwargs else 100
         self.frames_count = 0
 
+        self.grace_frames = int( kwargs['graceframes'] ) \
+            if 'graceframes' in kwargs else 10
+        self.grace_remaining = 0
+
     def create_or_append_to_writer( self, frame ):
+        if None == self.writer:
+            self.grace_remaining = self.grace_frames
+        else:
+            self.grace_remaining -= 1
         super().create_or_append_to_writer( frame, VideoCaptureWriter )
         self.frames_count += 1
 
     def handle_motion_frame( self, frame : numpy.ndarray ):
 
         if self.frames_count >= self.max_frames:
-            # Have the caller finalize with this frame instead to break the
-            # video up into chunks.
-            raise VideoLengthException(
-                'motion exceeded maximum {} frames'.format(
-                self.max_frames ) )
+            # Finalize motion to break up video into chunks.
+            self.grace_remaining = 0
+            self.finalize_motion( frame )
         else:
             self.create_or_append_to_writer( frame.copy() )
 
