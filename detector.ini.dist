@@ -48,13 +48,16 @@ reportframes=100
 overlay=<time>
 overlaycoords=10,20
 
-[weather]
+[doorbot.overlays.timestamp]
+enable=true
+
+[doorbot.overlays.weather]
 enable=false
 url=
 refresh=300
 format=<outTemp> <humidity>, wind <windSpeed>, rain <rainRate>
 
-[mqtt]
+[doorbot.notifiers.mqtt]
 enable=false
 host=
 port=8883
