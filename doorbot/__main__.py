@@ -143,8 +143,7 @@ class Doorbot( Thread ):
                     event.dimensions, event.position ), True, frame=frame )
             else:
                 # No motion frames were found, digest capture pipeline.
-                for capturer in self.capturers:
-                    capturer.capture( None )
+                self.capture( None )
 
             self.timer.loop_timer_end()
 

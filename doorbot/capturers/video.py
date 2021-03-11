@@ -10,6 +10,7 @@ try:
 except ImportError:
     import cv2
 
+from doorbot.portability import is_frame
 from doorbot.capturers import Capture, CaptureWriter
 
 class VideoCaptureWriter( CaptureWriter ):
@@ -93,8 +94,10 @@ class VideoCapture( Capture ):
             # Finalize motion to break up video into chunks.
             self.grace_remaining = 0
             self.finalize_motion( frame )
-        else:
+        elif is_frame( frame ):
             self.create_or_append_to_writer( frame.copy() )
+        else:
+            self.finalize_motion( frame )
 
     def finalize_motion( self, frame : numpy.ndarray ):
         if None == self.writer and isinstance( frame, numpy.ndarray ):
