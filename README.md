@@ -237,6 +237,10 @@ This notifier sends action notifications to an MQTT server (not included; we rec
 
   If snapshots are enabled, this should be set to "true" to enable the retain flag on snapshot notifications, so that the last snapshot received by the server is retained and sent to newly connected subscribers until it's overwritten by the next received snapshot.
 
+* **snapstopic** (optional, default \[topic\]/snapshot/movement)
+
+  If specified, snapshots will be published to this topic instead of the one from the MQTT URL. If not specified, they will be published to the topic from the MQTT URL with "/snapshot/movement" appended.
+
 * **logger** (optional, default "false")
 
   For debugging purposes. "true" if extended logging should be enabled for the MQTT notifier, otherwise "false".

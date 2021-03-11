@@ -7,6 +7,7 @@ import io
 from datetime import datetime
 from configparser import ConfigParser
 from tkinter import TclError, Tk, Frame, Label
+from urllib.parse import urlparse
 
 from paho.mqtt import client as mqtt_client
 from PIL import ImageTk, Image, ImageDraw
@@ -60,17 +61,22 @@ class SnapWindow( Frame ):
         self.draw_image( self.image_pil )
 
         # Setup MQTT.
+        mqtt_url = urlparse( kwargs['url'] )
         self.mqtt = mqtt_client.Client(
             'window-{}'.format( kwargs['uid'] ),
             True, None, mqtt_client.MQTTv31 )
         self.mqtt.loop_start()
         self.mqtt.enable_logger()
-        self.topic = '{}/snapshot/movement'.format( kwargs['topic'] )
+        self.topic = kwargs['snapstopic'] if 'snapstopic' in kwargs else \
+            '{}/snapshot/movement'.format( mqtt_url.path[1:] )
         self.mqtt.message_callback_add( self.topic, self.on_snap_received )
-        if 'ssl' in kwargs and 'true' == kwargs['ssl']:
+        if 'mqtts' == mqtt_url.scheme:
             self.mqtt.tls_set( kwargs['ca'], tls_version=ssl.PROTOCOL_TLSv1_2 )
         self.mqtt.on_connect = self.on_connected
-        host_port = (kwargs['host'], int( kwargs['port'] ))
+        host_port = (mqtt_url.hostname, mqtt_url.port)
+        if mqtt_url.username:
+            self.mqtt.username_pw_set(
+                mqtt_url.username, mqtt_url.password )
         self.logger.info( 'connecting to MQTT at %s...', host_port )
         self.mqtt.connect( host_port[0], host_port[1] )
 
@@ -119,7 +125,6 @@ class SnapWindow( Frame ):
     def on_connected( self, client, userdata, flags, rc ):
         self.logger.info( 'mqtt connected' )
         self.mqtt.subscribe( self.topic )
-        self.mqtt.subscribe( self.topic + '/timestamp' )
         self.logger.info( 'subscribed to: %s', self.topic )
 
     def on_snap_received( self, client, userdata, message ):
