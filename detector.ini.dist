@@ -73,3 +73,7 @@ overlaylineheight=25
 winautohide=false
 winautohidedelay=2000
 
+[doorbot.notifiers.logger]
+enable=false
+logfile=./testlog.log
+sysloghost=syslog://localhost

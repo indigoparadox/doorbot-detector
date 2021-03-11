@@ -211,6 +211,8 @@ These items can be included in any notifier's configuration stanza. They only af
 
 This notifier sends action notifications to an MQTT server (not included; we recommend [Mosquitto(https://mosquitto.org)]).
 
+#### Configuration
+
 * **url**
 
   The URL at which to connect to the MQTT server (e.g. mqtt://username:password@mqtt server:port/topic). If the path starts with mqtts://, then MQTT over TLS will be used.
@@ -250,6 +252,24 @@ This notifier sends action notifications to an MQTT server (not included; we rec
 ### \[doorbot.notifiers.logger\]
 
 This notifier publishes action notifications to a log. By default, log messages are emitted to stdout (similar to other log messages).
+
+#### Configuration
+
+* **logfile** (optional)
+
+  If this option is specified, action events will be logged to a file at the given local filesystem path.
+
+* **logmode** (optional, default "a")
+
+  Specifies how to open the logfile above. Can be "a" (for append, appends to the file if it exists), or "w" (for write, overwrites the file if it exists).
+
+* **sysloghost** (optional)
+
+  If specified, action events will be logged to the given syslog server. Should be a URL in the form of syslog://syslog hostname:syslog port/syslog facility (e.g. syslog://localhost:514/user).
+
+* **logstream** (optional, default "enabled")
+
+  If this option is specified as "disabled", then logging action events to stdout will be disabled.
 
 ## Overlays
 

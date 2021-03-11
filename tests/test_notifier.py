@@ -2,6 +2,7 @@
 import os
 import sys
 import unittest
+import logging
 from contextlib import ExitStack
 from unittest.mock import patch, Mock, call
 
@@ -10,8 +11,8 @@ from faker import Faker
 sys.path.insert( 0, os.path.dirname( os.path.dirname( __file__) ) )
 
 import doorbot.notifiers.mqtt
+import doorbot.notifiers.logger
 from doorbot.notifiers.email import EMailNotifier
-from doorbot.notifiers.logger import LoggerNotifier
 from doorbot.portability import image_to_jpeg
 from fake_camera import FakeCamera
 
@@ -20,6 +21,7 @@ class TestNotifier( unittest.TestCase ):
     def setUp( self ):
         self.fake = Faker()
         self.fake.add_provider( FakeCamera )
+        self.logger = logging.getLogger( 'test' )
 
     def test_notify_email( self ):
         pass
@@ -55,3 +57,19 @@ class TestNotifier( unittest.TestCase ):
                 call( 'testtopic/Test Snapshot/timestamp',
                     str( 1024.1028 ), retain=True )
             ] )
+
+    def test_notify_logger( self ):
+
+        mock_log = Mock()
+
+        doorbot.notifiers.logger.logging = mock_log
+
+        args = {
+            'enable': 'true'
+        }
+
+        notifier = doorbot.notifiers.logger.LoggerNotifier( **args )
+        notifier.send( 'Test', 'Test Notify' )
+
+        logger = mock_log.getLogger.return_value
+        logger.info.assert_called_once_with( '%s: %s', 'Test', 'Test Notify' )
