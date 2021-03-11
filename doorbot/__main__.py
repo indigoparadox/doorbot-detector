@@ -6,7 +6,8 @@ from threading import Thread
 
 from doorbot.portability import image_to_jpeg, is_frame
 from doorbot.overlays.opencv import OpenCVOverlays
-from doorbot.util import FPSTimer, load_modules
+from doorbot.util import FPSTimer
+from doorbot.config import DoorbotConfig
 
 class Doorbot( Thread ):
 
@@ -14,7 +15,7 @@ class Doorbot( Thread ):
     camera and passes them through the detection system. Passes frames of
     interest through the capture system, and then sends notifications. '''
 
-    def __init__( self, config_path, **kwargs ):
+    def __init__( self, config : DoorbotConfig, **kwargs ):
 
         super().__init__()
 
@@ -22,17 +23,13 @@ class Doorbot( Thread ):
         self.timer = FPSTimer( self, **kwargs )
         self.stale_frames = 0
 
-        config = RawConfigParser()
-        config.read( config_path )
-        module_configs = load_modules( config )
-
         self.logger = logging.getLogger( 'main' )
 
         # Setup the notifier.
 
         self.notifiers = []
 
-        for notifier_cfg in module_configs['notifiers']:
+        for notifier_cfg in config['notifiers']:
             notifier = notifier_cfg['module'].PLUGIN_CLASS( **notifier_cfg )
             self.notifiers.append( notifier )
 
@@ -40,7 +37,7 @@ class Doorbot( Thread ):
 
         self.capturers = []
 
-        for capturer_cfg in module_configs['capturers']:
+        for capturer_cfg in config['capturers']:
             capturer = capturer_cfg['module'].PLUGIN_CLASS( **capturer_cfg )
             self.capturers.append( capturer )
 
@@ -48,25 +45,25 @@ class Doorbot( Thread ):
 
         self.observer_procs= []
 
-        for observer_cfg in module_configs['observers']:
+        for observer_cfg in config['observers']:
             observer = observer_cfg['module'].PLUGIN_CLASS( **observer_cfg )
             self.observer_procs.append( observer )
 
         self.detectors = []
 
-        for detector_cfg in module_configs['detectors']:
+        for detector_cfg in config['detectors']:
             detector = detector_cfg['module'].PLUGIN_CLASS( **detector_cfg )
             self.detectors.append( detector )
 
         self.overlay_thread = OpenCVOverlays()
 
-        for overlay_cfg in module_configs['overlays']:
+        for overlay_cfg in config['overlays']:
             overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
             self.overlay_thread.add_overlay( overlay )
 
         self.camera = \
-            module_configs['cameras'][0]['module'].PLUGIN_CLASS(
-                **module_configs['cameras'][0] )
+            config['cameras'][0]['module'].PLUGIN_CLASS(
+                **config['cameras'][0] )
 
     def notify( self, subject, message, has_frame, frame=None ):
         for notifier in self.notifiers:
@@ -149,22 +146,34 @@ class Doorbot( Thread ):
 
 def main():
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        'doorbot', description='camera monitoring and activity detection' )
 
     verbosity_grp = parser.add_mutually_exclusive_group()
 
-    verbosity_grp.add_argument( '-v', '--verbose', action='store_true' )
+    verbosity_grp.add_argument(
+        '-v', '--verbose', action='store_true',
+        help='show debug messages on stdout' )
 
-    verbosity_grp.add_argument( '-q', '--quiet', action='store_true' )
+    verbosity_grp.add_argument(
+        '-q', '--quiet', action='store_true',
+        help='be as silent as possible on stdout' )
 
     parser.add_argument(
-        '-c', '--config', action='store', default='detector.ini' )
+        '-c', '--config', action='store', default=None,
+        help='manually specify a location for the config file to use' )
 
-    #parser.add_argument(
-    #    '-f', '--fps', action='store', type=float, default=5.0,
-    #    help='FPS to run main loop at. Does NOT affect camera FPS.' )
+    parser.add_argument(
+        '-o', '--option', action='append', nargs=3,
+        metavar=('section', 'option', 'value'),
+        help='specify a manual override for the given option'    )
 
     args = parser.parse_args()
+
+    for option in args.option:
+        print( option )
+
+    config = DoorbotConfig( args.config, args.option )
 
     if args.verbose:
         logging.basicConfig( level=logging.DEBUG )
@@ -179,7 +188,7 @@ def main():
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     #logger = logging.getLogger( 'main' )
 
-    app = Doorbot( args.config )
+    app = Doorbot( config )
 
     app.start()
     app.join()

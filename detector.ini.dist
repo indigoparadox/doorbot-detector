@@ -1,7 +1,4 @@
 
-[global]
-graceframes=10
-
 [doorbot.cameras.rtsp]
 enable=true
 url=rtsp://user:password@camera.example.com/stream
@@ -23,6 +20,7 @@ path=/srv/snapshots
 fps=5.0
 fourcc=mp4v
 container=mp4
+graceframes=10
 
 [doorbot.capturers.photo]
 enable=false
