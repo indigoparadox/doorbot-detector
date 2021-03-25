@@ -166,7 +166,7 @@ def main():
     parser.add_argument(
         '-o', '--option', action='append', nargs=3,
         metavar=('section', 'option', 'value'),
-        help='specify a manual override for the given option'    )
+        help='specify a manual override for the given option' )
 
     args = parser.parse_args()
 
