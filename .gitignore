@@ -7,3 +7,5 @@ snapshots
 env
 dist
 *.egg-info
+testlog.log
+testdata
