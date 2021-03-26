@@ -80,7 +80,7 @@ class Doorbot( Thread ):
                 overlayed_frame = frame.copy()
                 overlayed_frame = self.overlay_thread.draw( overlayed_frame, **notifier.kwargs )
                 jpg = image_to_jpeg( overlayed_frame )
-                notifier.snapshot( 'snapshot/{}'.format( subject ), jpg )
+                notifier.snapshot( subject, jpg )
 
     def capture( self, frame ):
         for capturer in self.capturers:

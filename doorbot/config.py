@@ -39,7 +39,6 @@ class DoorbotConfig( object ):
             instances = []
             try:
                 instances = self.parser[section_name]['instances'].split( ',' )
-                print( instances )
             except:
                 continue
 

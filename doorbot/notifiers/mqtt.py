@@ -23,7 +23,14 @@ class MQTTNotifier( Notifier ):
 
         parsed_url = urlparse( kwargs['url'] )
 
-        self.topic = parsed_url.path[1:] # Strip initial /.
+        self.topic = parsed_url.path[1:] if '/' == parsed_url.path[0] \
+            else parsed_url.path
+        self.snapshot_topic = kwargs['snapshottopic'] \
+            if 'snapshottopic' in kwargs else \
+            '{}/snapshot'.format( self.topic )
+        self.timestamp_topic = kwargs['timestamptopic'] \
+            if 'timestamptopic' in kwargs else \
+            '{}/snapshot/%m/timestamp'.format( self.topic )
         self.mqtt = mqtt_client.Client(
             kwargs['uid'], True, None, mqtt_client.MQTTv31 )
         self.mqtt.loop_start()
@@ -42,20 +49,28 @@ class MQTTNotifier( Notifier ):
                 parsed_url.username, parsed_url.password )
         self.mqtt.connect( parsed_url.hostname, parsed_url.port )
 
+    @staticmethod
+    def build_topic( topic, subject ):
+        if r'%s' in topic:
+            return topic.replace( r'%s', subject )    
+        return '{}/{}'.format( topic, subject )
+
     def send( self, subject, message ):
-        topic = '{}/{}'.format( self.topic, subject )
+        topic = MQTTNotifier.build_topic( self.topic, subject )
         self.logger.debug( 'publishing %s to %s...', message, topic )
         self.mqtt.publish( topic, message )
 
     def snapshot( self, subject, attachment ):
         if not self.snapshot:
             return
-        topic = '{}/{}'.format( self.topic, subject )
+        snapshot_topic = \
+            MQTTNotifier.build_topic( self.snapshot_topic, subject )
+        timestamp_topic = \
+            MQTTNotifier.build_topic( self.timestamp_topic, subject )
         sz = round( len( attachment ) / 1024, 2 )
-        self.logger.debug( 'snapshot (%dkB) to %s...', sz, topic )
-        self.mqtt.publish( topic, attachment, retain=True )
-        self.mqtt.publish(
-            '{}/timestamp'.format( topic ), str( time.time() ), retain=True )
+        self.logger.debug( 'snapshot (%dkB) to %s...', sz, snapshot_topic )
+        self.mqtt.publish( snapshot_topic, attachment, retain=True )
+        self.mqtt.publish( timestamp_topic, str( time.time() ), retain=True )
 
     def on_connected( self, client, userdata, flags, rc ):
         self.logger.info( 'mqtt connected' )
