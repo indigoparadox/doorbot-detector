@@ -1,8 +1,10 @@
 
-import logging
 import argparse
-from configparser import RawConfigParser
+import logging
+from logging.handlers import SMTPHandler
+from configparser import NoOptionError, NoSectionError
 from threading import Thread
+from urllib.parse import urlparse
 
 from doorbot.portability import image_to_jpeg, is_frame
 from doorbot.overlays.opencv import OpenCVOverlays
@@ -170,8 +172,8 @@ def main():
 
     args = parser.parse_args()
 
-    for option in args.option:
-        print( option )
+    if not args.option:
+        args.option = []
 
     config = DoorbotConfig( args.config, args.option )
 
@@ -186,7 +188,28 @@ def main():
     else:
         logging.basicConfig( level=logging.INFO )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
-    #logger = logging.getLogger( 'main' )
+    logger = logging.getLogger( 'main' )
+
+    try:
+        smtp_server = urlparse( config.parser['exceptions']['smtpserver'] )
+        smtp_handler = SMTPHandler(
+            (smtp_server.hostname,
+                smtp_server.port if smtp_server.port else 25),
+            config.parser['exceptions']['smtpfrom'],
+            config.parser['exceptions']['smtpto'].split( ',' ),
+            '[doorbot] Exception Occurred' )
+        if smtp_server.username:
+            smtp_handler.username = smtp_server.username
+        if smtp_server.password:
+            smtp_handler.password = smtp_server.password
+        if 'smtps' == smtp_server.scheme:
+            smtp_handler.secure = ()
+        smtp_handler.setLevel( logging.ERROR )
+        logging.getLogger( '' ).addHandler( smtp_handler )
+        logger.info( 'exception reporter initialized' )
+
+    except (NoOptionError, NoSectionError) as exc:
+        logger.info( 'could not setup exception reporter: %s', exc )
 
     app = Doorbot( config )
 

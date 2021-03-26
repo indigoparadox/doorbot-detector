@@ -9,7 +9,8 @@ class DoorbotConfig( object ):
     default_config_paths = [
         os.path.join( os.path.expanduser( '~' ),
             ".{}".format( default_config_filename) ),
-        os.path.join( "/etc", default_config_filename )]
+        os.path.join( "/etc", default_config_filename ),
+        os.path.join( '.', default_config_filename )]
 
     def __init__( self, config_path : str, overrides : list ):
 
@@ -19,8 +20,8 @@ class DoorbotConfig( object ):
                     config_path = path
                     break
 
-        config = RawConfigParser()
-        config.read( config_path )
+        self.parser = RawConfigParser()
+        self.parser.read( config_path )
 
         self._config = {
             'observers': [],
@@ -31,8 +32,8 @@ class DoorbotConfig( object ):
             'notifiers': []
         }
 
-        for section_name in config.sections():
-            item_config = dict( config.items( section_name ) )
+        for section_name in self.parser.sections():
+            item_config = dict( self.parser.items( section_name ) )
 
             # Apply any applicable overrides.
             for override_section, override_option, override_value in overrides:
@@ -48,7 +49,7 @@ class DoorbotConfig( object ):
 
 
     def __getitem__( self, key : str ):
-        return dict( self._config.items( key ) )
+        return self._config[key]
 
     def __str__( self ):
         return str( self._config )
