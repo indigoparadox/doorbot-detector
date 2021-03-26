@@ -1,4 +1,5 @@
 
+import sys
 import argparse
 import logging
 from logging.handlers import SMTPHandler
@@ -63,9 +64,13 @@ class Doorbot( Thread ):
             overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
             self.overlay_thread.add_overlay( overlay )
 
-        self.camera = \
-            config['cameras'][0]['module'].PLUGIN_CLASS(
-                **config['cameras'][0] )
+        try:
+            self.camera = \
+                config['cameras'][0]['module'].PLUGIN_CLASS(
+                    **config['cameras'][0] )
+        except:
+            self.logger.error( 'at least one camera must be configured!' )
+            sys.exit( 1 )
 
     def notify( self, subject, message, has_frame, frame=None ):
         for notifier in self.notifiers:

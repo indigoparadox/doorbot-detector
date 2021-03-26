@@ -1,11 +1,17 @@
 
 [doorbot.cameras.rtsp]
+instances=1
+
+[instance.doorbot.cameras.rtsp.1]
 enable=true
 url=rtsp://user:password@camera.example.com/stream
 fps=5.0
 reportframes=100
 
 [doorbot.detectors.motion]
+instances=1
+
+[instance.doorbot.detectors.motion.1]
 enable=true
 threshold=50
 varthreshold=200
@@ -15,6 +21,9 @@ minh=20
 ignoreedges=false
 
 [doorbot.capturers.video]
+instances=1
+
+[instance.doorbot.capturers.video.1]
 enable=true
 path=/srv/snapshots
 fps=5.0
@@ -23,39 +32,57 @@ container=mp4
 graceframes=10
 
 [doorbot.capturers.photo]
+instances=1
+
+[instance.doorbot.capturers.photo.1]
 enable=false
 path=/srv/snapshots
 
 [doorbot.observers.framebuffer]
+instances=1
+
+[instance.doorbot.observers.framebuffer.1]
 enable=false
 path=/dev/fb0
 fps=5.0
 reportframes=100
 width=480
 height=320
-overlay=<time>
+overlay=<time.1>
 overlaycoords=10,20
 overlayfont=HERSHEY_SIMPLEX
 
 [doorbot.observers.reserver]
+instances=1
+
+[instance.doorbot.observers.reserver.1]
 enable=true
 listen=127.0.0.1
 port=8888
 fps=5.0
 reportframes=100
-overlay=<time>
+overlay=<time.1>
 overlaycoords=10,20
 
 [doorbot.overlays.timestamp]
+instances=1
+
+[instance.doorbot.overlays.timestamp.1]
 enable=true
 
 [doorbot.overlays.weather]
+instances=1
+
+[instance.doorbot.overlays.weather.1]
 enable=false
 url=http://weather.example.com/current.json
 refresh=300
 format=<outTemp> <humidity>, wind <windSpeed>, rain <rainRate>
 
 [doorbot.notifiers.mqtt]
+instances=1
+
+[instance.doorbot.notifiers.mqtt.1]
 enable=false
 url=mqtt://mqtt.example.com:1883/topic
 logger=false
@@ -72,6 +99,9 @@ winautohide=false
 winautohidedelay=2000
 
 [doorbot.notifiers.logger]
+instances=1
+
+[instance.doorbot.notifiers.logger.1]
 enable=false
 logfile=./testlog.log
 sysloghost=syslog://localhost

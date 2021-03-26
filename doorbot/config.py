@@ -33,20 +33,32 @@ class DoorbotConfig( object ):
         }
 
         for section_name in self.parser.sections():
-            item_config = dict( self.parser.items( section_name ) )
+            if section_name.startswith( 'instance.' ):
+                continue
 
-            # Apply any applicable overrides.
-            for override_section, override_option, override_value in overrides:
-                if section_name == override_section:
-                    item_config[override_option] = override_value
+            instances = []
+            try:
+                instances = self.parser[section_name]['instances'].split( ',' )
+                print( instances )
+            except:
+                continue
 
-            if 'enable' in item_config and 'true' == item_config['enable']:
-                item_config['module'] = import_module( section_name.strip() )
+            for instance in instances:
 
-                # Import module and stow config.
-                item_config['type'] = item_config['module'].PLUGIN_TYPE
-                self._config[item_config['type']].append( item_config )
+                item_config = dict( self.parser.items( 'instance.{}.{}'.format(
+                    section_name, instance ) ) )
 
+                # Apply any applicable overrides.
+                for override_section, override_option, override_value in overrides:
+                    if section_name == override_section:
+                        item_config[override_option] = override_value
+
+                if 'enable' in item_config and 'true' == item_config['enable']:
+                    item_config['module'] = import_module( section_name.strip() )
+
+                    # Import module and stow config.
+                    item_config['type'] = item_config['module'].PLUGIN_TYPE
+                    self._config[item_config['type']].append( item_config )
 
     def __getitem__( self, key : str ):
         return self._config[key]

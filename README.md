@@ -22,6 +22,16 @@ Snapshots or video can be captured when motion is detected, and then stored loca
 
 # Modules
 
+## Instances
+
+All module configurations are separated into "instances". This allows for the same module to be configured to do more than one thing. For example, the MQTT notifier can be configured to upload to two separate MQTT servers.
+
+The basic outline for this is that each module has its own master configuration stanza (e.g. \[doorbot.notifiers.mqtt\]) with an *instance=* line followed by a comma-separated list of *instance names* (e.g. *1*, in the default config for most modules).
+
+These names refer to instances that can then be configured independently in their own stanzas, the names of which begin with *instance.* and end with *.{name of instance}* (e.g. \[instance.doorbot.notifiers.mqtt.1\], using the example of the *doorbot.notifiers.mqtt* module with the instance named *1*).
+
+Please see the example configuration file *detector.ini.dist* for more information.
+
 ## Cameras
 
 ### Common Configuration \[doorbot.cameras.*\]
@@ -282,7 +292,7 @@ These configuration options may be included In the configuration stanzas of [Obs
 
 * **overlay** (optional)
 
-  Overlay line to be stamped on observed images. (e.g. \<weather\>\n\<time\>) Uses tokens populated by enabled overlays defined [below](#overlays).
+  Overlay line to be stamped on observed images. (e.g. \<weather.1\>\n\<time.1\>) Uses tokens populated by enabled overlays defined [below](#overlays) separated by a "." from the desired instance of said overlay.
 
 * **overlaycoords** (optional, default 10, 10)
 
