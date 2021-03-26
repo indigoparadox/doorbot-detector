@@ -30,7 +30,7 @@ class MQTTNotifier( Notifier ):
             '{}/snapshot'.format( self.topic )
         self.timestamp_topic = kwargs['timestamptopic'] \
             if 'timestamptopic' in kwargs else \
-            '{}/snapshot/%m/timestamp'.format( self.topic )
+            self.topic + r'/snapshot/%s/timestamp'
         self.mqtt = mqtt_client.Client(
             kwargs['uid'], True, None, mqtt_client.MQTTv31 )
         self.mqtt.loop_start()
