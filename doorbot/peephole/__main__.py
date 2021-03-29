@@ -4,13 +4,12 @@ import logging
 import ssl
 import argparse
 import io
-from datetime import datetime
-from configparser import ConfigParser
-from tkinter import TclError, Tk, Frame, Label
+from configparser import RawConfigParser
+from tkinter import TclError, Tk, Frame, Label, Canvas
 from urllib.parse import urlparse
 
 from paho.mqtt import client as mqtt_client
-from PIL import ImageTk, Image, ImageDraw
+from PIL import ImageTk, Image
 
 TrayMenu = None
 TrayIcon = None
@@ -27,8 +26,8 @@ class SnapWindow( Frame ):
 
         self.logger = logging.getLogger( 'peephole' )
 
-        self.snap_size = \
-            tuple( [int( x ) for x in kwargs['snapsize'].split( ',' )] )
+        #self.snap_size = \
+        #    tuple( [int( x ) for x in kwargs['snapsize'].split( ',' )] )
 
         # Setup tray icon.
         self.icon = kwargs['icon'] if 'icon' in kwargs else None
@@ -51,20 +50,25 @@ class SnapWindow( Frame ):
         self.always_on_top = False if 'winalwaysontop' in kwargs and \
             'true' != kwargs['winalwaysontop'] else True
 
-        self.pack()
-
         # Setup image drawing area.
-        self.image = Label( self )
-        self.image.pack( fill="both", expand="yes" )
-
-        self.image_pil = Image.new( 'RGB', self.snap_size )
+        self.window_size = \
+            tuple( [int( x ) for x in kwargs['size'].split( ',' )] ) \
+            if 'size' in kwargs else (320, 240)
+        self.canvas = Canvas( self.master )
+        self.canvas.pack()
+        self.image_label = Label( self.canvas )
+        self.image_label.bind( '<Configure>', self._resize_image_to_window )
+        self.image_tk = None
+        self.image_pil = Image.new( 'RGB', self.window_size )
         self.draw_image( self.image_pil )
+        self.image_label.pack( fill="both", expand="yes" )
+
+        self.pack( fill="both", expand="yes" )
 
         # Setup MQTT.
         mqtt_url = urlparse( kwargs['url'] )
         self.mqtt = mqtt_client.Client(
-            'window-{}'.format( kwargs['uid'] ),
-            True, None, mqtt_client.MQTTv31 )
+            kwargs['uid'], True, None, mqtt_client.MQTTv31 )
         self.mqtt.loop_start()
         self.mqtt.enable_logger()
         self.topic = kwargs['snapstopic'] if 'snapstopic' in kwargs else \
@@ -105,10 +109,17 @@ class SnapWindow( Frame ):
         self.master.deiconify()
 
     def draw_image( self, image ):
-
-        image_tk = ImageTk.PhotoImage( image )
-        self.image.configure( image=image_tk )
+        image_rsz = image.copy()
+        image_rsz = image_rsz.resize( (
+          self.master.winfo_width(),
+          self.master.winfo_height()
+        ) )
+        image_tk = ImageTk.PhotoImage( image_rsz )
+        self.image_label.configure( image=image_tk )
         self.image_tk = image_tk
+
+    def _resize_image_to_window( self, event ):
+        self.draw_image( self.image_pil )
 
     def toggle_autohide( self, *args, **kwargs ):
         self.logger.debug( 'clicked' )
@@ -140,10 +151,11 @@ class SnapWindow( Frame ):
         self.get_attention()
 
         self.logger.debug( 'snap received (%d kB)', len( message.payload ) )
-        image_raw = Image.open( io.BytesIO( message.payload ) )
-        self.image_pil = image_raw.resize( self.snap_size )
-        img = self.image_pil.copy()
-        self.draw_image( img )
+        #image_raw = Image.open( io.BytesIO( message.payload ) )
+        #self.image_pil = image_raw.resize( self.snap_size )
+        self.image_pil = Image.open( io.BytesIO( message.payload ) )
+        #img = self.image_pil.copy()
+        self.draw_image( self.image_pil )
 
         if self._autohide:
             self.logger.debug( 'waiting 1 second to hide...' )
@@ -183,11 +195,12 @@ def main():
     logging.getLogger( 'PIL.PngImagePlugin' ).setLevel( logging.WARNING )
     logger = logging.getLogger( 'main' )
 
-    config = ConfigParser()
+    config = RawConfigParser()
     config.read( args.config )
 
     root = Tk()
     root.title( 'Camera Activity' )
+    root.configure( background='black' )
 
     tray_menu = None
     tray_icon = None
@@ -196,7 +209,7 @@ def main():
         tray_icon = \
             TrayIcon( 'detector-window-icon', 'camera-web', tray_menu )
 
-    win_cfg = dict( config.items( 'doorbot.notifiers.mqtt' ) )
+    win_cfg = dict( config.items( 'peephole' ) )
     win_cfg['icon'] = tray_icon
 
     win = SnapWindow( root, **win_cfg )

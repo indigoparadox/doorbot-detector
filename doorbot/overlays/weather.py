@@ -34,7 +34,7 @@ class WeatherOverlay( OverlayHandler ):
         if 0 < self.countdown:
             return
 
-        self.logger.debug( 'update timer elapsed' )
+        #self.logger.debug( 'update timer elapsed' )
 
         # Reset the timer.
         self.countdown = self.refresh

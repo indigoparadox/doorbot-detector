@@ -187,6 +187,7 @@ def main():
         #logging.getLogger( 'doorbot.run' ).setLevel( logging.INFO )
         #logging.getLogger( 'doorbot.process' ).setLevel( logging.WARNING )
         #logging.getLogger( 'camera.process' ).setLevel( logging.WARNING )
+        logging.getLogger( 'urllib3.connectionpool' ).setLevel( logging.WARNING )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
