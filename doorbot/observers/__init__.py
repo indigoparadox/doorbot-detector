@@ -60,7 +60,10 @@ class ObserverProc( multiprocessing.Process ):
         self._frame_update_thread = threading.Thread( target=frame_update, daemon=True )
         self._frame_update_thread.start()
 
-        self.loop()
+        try:
+            self.loop()
+        except Exception as exc:
+            self.logger.error( '%s: %s: %s'.format( type( self ), type( exc ), exc ) )
 
     def stop( self ):
         self._running = False        
