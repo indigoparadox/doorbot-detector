@@ -47,8 +47,6 @@ class RTSP( Camera ):
 
             self.frame = frame
 
-            #self.process( frame )
-
             self.timer.loop_timer_end()
 
 PLUGIN_CLASS = RTSP # pylint: disable=invalid-name

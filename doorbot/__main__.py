@@ -24,7 +24,7 @@ class Doorbot( object ):
 
         self.running = True
         self.timer = FPSTimer( self, **kwargs )
-        self.stale_frames = 0
+        #self.stale_frames = 0
 
         self.logger = logging.getLogger( 'main' )
 
@@ -118,18 +118,18 @@ class Doorbot( object ):
 
             # Spin until we have a new frame to process.
             if not self.camera.ready:
-                self.logger.debug( 'waiting for frame...' )
+                #self.logger.debug( 'waiting for frame...' )
                 self.timer.loop_timer_end()
                 continue
-            elif self.camera.frame_stale:
-                self.stale_frames += 1
-                self.timer.loop_timer_end()
-                continue
+            #elif self.camera.frame_stale:
+            #    self.stale_frames += 1
+            #    self.timer.loop_timer_end()
+            #    continue
 
             #logger.debug( 'processing frame...' )
-            if self.stale_frames:
-                #self.logger.debug( 'skipped %d stale frames', self.stale_frames )
-                self.stale_frames = 0
+            #if self.stale_frames:
+            #    #self.logger.debug( 'skipped %d stale frames', self.stale_frames )
+            #    self.stale_frames = 0
 
             # The camera provides a copy while using the proper locks.
             frame = self.camera.frame
