@@ -1,5 +1,4 @@
 
-import time
 import logging
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -11,7 +10,7 @@ from doorbot.util import FPSTimer
 
 class ReserverHandler( BaseHTTPRequestHandler ):
 
-    def do_GET( self ):
+    def do_GET( self ): # pylint: disable=invalid-name
 
         self.server.logger.debug( 'connection from %s...', self.address_string() )
 
@@ -22,7 +21,7 @@ class ReserverHandler( BaseHTTPRequestHandler ):
         self.path.endswith( '.mjpeg' ):
             return self.serve_mjpeg()
 
-    def log_message( self, format, *args ):
+    def log_message( self, format, *args ): # pylint: disable=redefined-builtin
         return
 
     def serve_jpeg( self ):
@@ -122,5 +121,5 @@ class ReserverProc( ObserverProc ):
         self._server.serve_forever()
         self.running = False
 
-PLUGIN_CLASS = ReserverProc
+PLUGIN_CLASS = ReserverProc # pylint: disable=invalid-name
 PLUGIN_TYPE = 'observers'

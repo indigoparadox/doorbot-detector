@@ -2,8 +2,6 @@
 import logging
 import time
 import threading
-import importlib
-from configparser import RawConfigParser
 from contextlib import contextmanager
 
 class FPSTimer( object ):
@@ -45,10 +43,10 @@ class FPSTimer( object ):
 
         if len( self._loop_info.durations ) > self.report_frames:
             # Sleep time + work time = total loop time.
-            avg_sleep = sum( x[1] for x in self._loop_info.durations ) / \
-                len( self._loop_info.durations )
-            avg_work = sum( x[0] for x in self._loop_info.durations ) / \
-                len( self._loop_info.durations )
+            #avg_sleep = sum( x[1] for x in self._loop_info.durations ) / \
+            #    len( self._loop_info.durations )
+            #avg_work = sum( x[0] for x in self._loop_info.durations ) / \
+            #    len( self._loop_info.durations )
 
             #logger.debug( '%s fps: %d (thread %d)',
             #    type( self.parent ), 1.0 / (avg_sleep + avg_work),
@@ -64,7 +62,7 @@ class RWLockWriteException( Exception ):
 
 class RWLock( object ):
 
-    def __init__( self, blocking=True, lock=None ):
+    def __init__( self, blocking=True, lock=None ): # pylint: disable=unused-argument
         if not lock:
             lock = threading.Lock()
         self._ready = threading.Condition( lock )
@@ -128,7 +126,7 @@ class RWLock( object ):
         self._lock_write()
         try:
             self._wrapped_abstraction = frame
-        except Exception as exc:
+        except Exception as exc: # pylint: disable=broad-except
             self.logger.error( '%s: %s', type( exc ), exc )
         self._release_write()
 

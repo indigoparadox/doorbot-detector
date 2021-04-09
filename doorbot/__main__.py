@@ -4,7 +4,7 @@ import argparse
 import logging
 from logging.handlers import SMTPHandler
 from configparser import NoOptionError, NoSectionError
-from threading import Thread
+#from threading import Thread
 from urllib.parse import urlparse
 
 from doorbot.portability import image_to_jpeg, is_frame
@@ -222,7 +222,7 @@ def main():
     app = None
     try:
         app = Doorbot( config )
-        
+
         app.run()
     except KeyboardInterrupt:
         logger.info( 'quitting on ctrl-c' )
@@ -233,7 +233,7 @@ def main():
                 proc.stop()
         sys.exit( 0 )
 
-    except Exception as exc:
+    except Exception as exc: # pylint: disable=broad-except
         logger.error( '%s: %s', type( exc ), exc )
 
 if '__main__' == __name__:

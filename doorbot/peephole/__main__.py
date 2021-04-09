@@ -11,8 +11,8 @@ from urllib.parse import urlparse
 from paho.mqtt import client as mqtt_client
 from PIL import ImageTk, Image
 
-TrayMenu = None
-TrayIcon = None
+TrayMenu = None # pylint: disable=invalid-name
+TrayIcon = None # pylint: disable=invalid-name
 from doorbot.exceptions import TrayNotAvailableException
 try:
     from doorbot.peephole.icon import TrayIcon, TrayMenu
@@ -118,10 +118,10 @@ class SnapWindow( Frame ):
         self.image_label.configure( image=image_tk )
         self.image_tk = image_tk
 
-    def _resize_image_to_window( self, event ):
+    def _resize_image_to_window( self, event ): # pylint: disable=unused-argument
         self.draw_image( self.image_pil )
 
-    def toggle_autohide( self, *args, **kwargs ):
+    def toggle_autohide( self, *args, **kwargs ): # pylint: disable=unused-argument
         self.logger.debug( 'clicked' )
 
         if not self._autohide and self.autohide_after:
@@ -133,12 +133,12 @@ class SnapWindow( Frame ):
             self.autohide_after = self.after(
                 self.autohide_delay, self.hide_window )
 
-    def on_connected( self, client, userdata, flags, rc ):
+    def on_connected( self, client, userdata, flags, rc ): # pylint: disable=unused-argument, invalid-name
         self.logger.info( 'mqtt connected' )
         self.mqtt.subscribe( self.topic )
         self.logger.info( 'subscribed to: %s', self.topic )
 
-    def on_snap_received( self, client, userdata, message ):
+    def on_snap_received( self, client, userdata, message ): # pylint: disable=unused-argument
 
         if self._autohide and self.autohide_after:
             self.logger.debug( 'canceling hide' )
@@ -162,7 +162,7 @@ class SnapWindow( Frame ):
             self.autohide_after = self.after(
                 self.autohide_delay, self.hide_window )
 
-    def stop( self, *args, **kwargs ):
+    def stop( self, *args, **kwargs ): # pylint: disable=unused-argument
         self.logger.info( 'mqtt shutting down...' )
         self.mqtt.disconnect()
         self.mqtt.loop_stop()
@@ -170,17 +170,17 @@ class SnapWindow( Frame ):
             self.icon.stop()
         try:
             self.master.destroy()
-        except TclError as e:
-            self.logger.error( 'error stopping tk: %s', e )
+        except TclError as exc:
+            self.logger.error( 'error stopping tk: %s', exc )
 
-    def mainloop( self ):
+    def mainloop( self ): # pylint: disable=unused-argument, arguments-differ
         super().mainloop()
 
-win = None
+win = None # pylint: disable=invalid-name
 
 def main():
 
-    global win
+    global win # pylint: disable=invalid-name
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -193,7 +193,7 @@ def main():
         level = logging.DEBUG
     logging.basicConfig( level=level )
     logging.getLogger( 'PIL.PngImagePlugin' ).setLevel( logging.WARNING )
-    logger = logging.getLogger( 'main' )
+    #logger = logging.getLogger( 'main' )
 
     config = RawConfigParser()
     config.read( args.config )
@@ -223,6 +223,6 @@ def main():
 if '__main__' == __name__:
     try:
         main()
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         #logger.info( 'quitting on ctrl-c' )
         win.stop()

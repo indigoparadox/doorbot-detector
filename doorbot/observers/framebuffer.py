@@ -50,4 +50,4 @@ class FramebufferProc( ObserverProc ):
             self.timer.loop_timer_end()
 
 PLUGIN_TYPE = 'observers'
-PLUGIN_CLASS = FramebufferProc
+PLUGIN_CLASS = FramebufferProc # pylint: disable=invalid-name

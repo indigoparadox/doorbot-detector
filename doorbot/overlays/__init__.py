@@ -19,7 +19,7 @@ class Overlays( threading.Thread ):
 
     def tokenize( self, text ):
 
-        ''' Given a line of text (nominally specified in the config), replace 
+        ''' Given a line of text (nominally specified in the config), replace
         tokens in it with tokens provided by loaded overlays. '''
 
         for overlay in self._overlays:
@@ -28,14 +28,14 @@ class Overlays( threading.Thread ):
 
         return text
 
-    def text( self, frame, text, position ):
+    def text( self, frame, text, position ): # pylint: disable=unused-argument
 
         ''' Draw text on the frame. This should be overridden by the
         implementation-specific overlay handler. '''
 
         return frame
 
-    def rect( self, frame, x1, y1, x2, y2, color, **kwargs ):
+    def rect( self, frame, x1, y1, x2, y2, color, **kwargs ): # pylint: disable=unused-argument, invalid-name
 
         ''' Draw a rectangle on the frame. This should be overridden by the
         implementation-specific overlay handler. '''
@@ -89,7 +89,7 @@ class Overlays( threading.Thread ):
 
 class OverlayHandler( object ):
 
-    def __init__( self, **kwargs ):
+    def __init__( self, **kwargs ): # pylint: disable=unused-argument
         self.current = ''
         self.master = None
 
@@ -97,7 +97,7 @@ class OverlayHandler( object ):
     def tokens( self ):
         return {}
 
-    def draw( self, frame, **kwargs ):
+    def draw( self, frame, **kwargs ): # pylint: disable=unused-argument
 
         ''' Draw overlay on the frame. This can be overridden by overlays that
         want to draw graphics. Simpler overlays can just provide tokens. '''

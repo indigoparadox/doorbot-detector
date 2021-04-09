@@ -1,6 +1,6 @@
 
 import logging
-import threading
+import multiprocessing
 
 try:
     from cv2 import cv2
@@ -9,7 +9,7 @@ except ImportError:
 
 from doorbot.util import FPSTimer, FrameLock
 
-class Camera( threading.Thread ):
+class Camera( multiprocessing.Process ):
 
     ''' This should run in the background and keep the stream moving so we
     don't waste time processing old frames. '''

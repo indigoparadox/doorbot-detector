@@ -51,5 +51,5 @@ class RTSP( Camera ):
 
             self.timer.loop_timer_end()
 
-PLUGIN_CLASS = RTSP
+PLUGIN_CLASS = RTSP # pylint: disable=invalid-name
 PLUGIN_TYPE = 'cameras'

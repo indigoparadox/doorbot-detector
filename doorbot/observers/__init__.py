@@ -25,7 +25,7 @@ class ObserverProc( multiprocessing.Process ):
             maxsize=int( kwargs['queuesize'] ) \
                 if 'queuesize' in kwargs else 20 )
 
-        # These are only defined for the subprocess, as they are only usable 
+        # These are only defined for the subprocess, as they are only usable
         # on the other side of the queue.
         self.get_frame = None
         self.frame_ready = None
@@ -54,7 +54,8 @@ class ObserverProc( multiprocessing.Process ):
                 frame = self._frame_queue.get()
                 self._frame.set_frame( frame )
 
-        self.get_frame = lambda: self._frame.get_frame()
+        # These handlers are needed to "wrap" camera inside process.
+        self.get_frame = lambda: self._frame.get_frame() #pylint: disable=unnecessary-lambda
         self.frame_ready = lambda: self._frame.frame_ready
 
         self._frame_update_thread = threading.Thread( target=frame_update, daemon=True )
@@ -62,8 +63,8 @@ class ObserverProc( multiprocessing.Process ):
 
         try:
             self.loop()
-        except Exception as exc:
-            self.logger.error( '%s: %s: %s'.format( type( self ), type( exc ), exc ) )
+        except Exception as exc: #pylint: disable=broad-except
+            self.logger.error( '%s: %s: %s', type( self ), type( exc ), exc )
 
     def stop( self ):
-        self._running = False        
+        self._running = False
