@@ -61,3 +61,6 @@ class ObserverProc( multiprocessing.Process ):
         self._frame_update_thread.start()
 
         self.loop()
+
+    def stop( self ):
+        self._running = False        

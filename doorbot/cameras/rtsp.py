@@ -35,7 +35,7 @@ class RTSP( Camera ):
             ret, frame = self._stream.read()
 
             if not ret:
-                self.logger.error( 'camera disconnected!' )
+                self.logger.warning( 'camera disconnected!' )
                 self._stream.release()
                 self.attempts += 1
                 self.logger.info( 'reconnecting (attempt %d)', self.attempts )

@@ -49,3 +49,6 @@ class Camera( threading.Thread ):
     @property
     def ready( self ):
         return self._ready
+
+    def stop( self ):
+        self.running = False

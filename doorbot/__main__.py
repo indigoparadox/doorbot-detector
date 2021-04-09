@@ -12,7 +12,7 @@ from doorbot.overlays.opencv import OpenCVOverlays
 from doorbot.util import FPSTimer
 from doorbot.config import DoorbotConfig
 
-class Doorbot( Thread ):
+class Doorbot( object ):
 
     ''' The central glue object of the application. Takes frames from the
     camera and passes them through the detection system. Passes frames of
@@ -64,13 +64,13 @@ class Doorbot( Thread ):
             overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
             self.overlay_thread.add_overlay( overlay )
 
-        try:
-            self.camera = \
-                config['cameras'][0]['module'].PLUGIN_CLASS(
-                    **config['cameras'][0] )
-        except:
-            self.logger.error( 'at least one camera must be configured!' )
-            sys.exit( 1 )
+        #try:
+        self.camera = \
+            config['cameras'][0]['module'].PLUGIN_CLASS(
+                **config['cameras'][0] )
+        #except:
+        #    self.logger.error( 'at least one camera must be configured!' )
+        #    sys.exit( 1 )
 
     def notify( self, subject, message, has_frame, frame=None ):
         for notifier in self.notifiers:
@@ -217,13 +217,24 @@ def main():
     except (NoOptionError, NoSectionError) as exc:
         logger.info( 'could not setup exception reporter: %s', exc )
 
-    app = Doorbot( config )
+    #app.start()
+    #app.join()
+    app = None
+    try:
+        app = Doorbot( config )
+        
+        app.run()
+    except KeyboardInterrupt:
+        logger.info( 'quitting on ctrl-c' )
+        if app:
+            app.camera.stop()
+            app.overlay_thread.stop()
+            for proc in app.observer_procs:
+                proc.stop()
+        sys.exit( 0 )
 
-    app.start()
-    app.join()
+    except Exception as exc:
+        logger.error( '%s: %s', type( exc ), exc )
 
 if '__main__' == __name__:
-    #try:
     main()
-    #except KeyboardInterrupt as e:
-    #    logger.info( 'quitting on ctrl-c' )

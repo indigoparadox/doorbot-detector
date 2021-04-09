@@ -84,6 +84,9 @@ class Overlays( threading.Thread ):
 
             time.sleep( self.refresh )
 
+    def stop( self ):
+        self.running = False
+
 class OverlayHandler( object ):
 
     def __init__( self, **kwargs ):
