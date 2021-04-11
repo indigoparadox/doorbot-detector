@@ -2,6 +2,7 @@
 import threading
 import time
 import re
+import logging
 
 class Overlays( threading.Thread ):
 
@@ -11,6 +12,7 @@ class Overlays( threading.Thread ):
         self._overlays = []
         self.highlights = {}
         self.daemon = True
+        self.logger = logging.getLogger( 'overlays' )
         self.refresh = kwargs['refresh'] if 'refresh' in kwargs else 5
 
     def add_overlay( self, overlay ):
@@ -80,7 +82,10 @@ class Overlays( threading.Thread ):
 
         while self.running:
             for overlay in self._overlays:
-                overlay.update()
+                try:
+                    overlay.update()
+                except Exception as exc: # pylint: disable=broad-except
+                    self.logger.error( '%s: %s', type( exc ), exc )
 
             time.sleep( self.refresh )
 

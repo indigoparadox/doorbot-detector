@@ -1,8 +1,8 @@
 
-from doorbot.cameras.rtsp import PLUGIN_CLASS, PLUGIN_TYPE
 import html
 import logging
 import time
+from json import JSONDecodeError
 
 import requests
 from requests.exceptions import RequestException
@@ -44,7 +44,7 @@ class WeatherOverlay( OverlayHandler ):
         try:
             req = requests.get( self.url )
             weather = req.json()
-        except RequestException as exc:
+        except (RequestException, JSONDecodeError) as exc:
             self.logger.error( 'unable to fetch weather: %s', exc )
             return
 
@@ -58,4 +58,4 @@ class WeatherOverlay( OverlayHandler ):
                 html.unescape( current[token] ) )
 
 PLUGIN_TYPE = 'overlays'
-PLUGIN_CLASS = WeatherOverlay
+PLUGIN_CLASS = WeatherOverlay # pylint: disable=invalid-name
