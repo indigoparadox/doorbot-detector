@@ -55,8 +55,13 @@ class ObserverProc( multiprocessing.Process ):
 
         def frame_update():
             while self._running:
-                frame = self._frame_queue.get()
-                self._frame.set_frame( frame )
+                frame = None
+                found_frame = False
+                while not self._frame_queue.empty():
+                    frame = self._frame_queue.get()
+                    found_frame = True
+                if found_frame:
+                    self._frame.set_frame( frame )
 
         # These handlers are needed to "wrap" camera inside process.
         self.get_frame = lambda: self._frame.get_frame() #pylint: disable=unnecessary-lambda
