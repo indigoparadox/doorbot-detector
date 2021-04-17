@@ -13,12 +13,12 @@ class FPSTimer( object ):
         self.report_frames = int( kwargs['reportframes'] ) \
             if 'reportframes' in kwargs else 60
         self.parent = parent
+        self.logger = logging.getLogger( 'fps.timer.{}'.format( parent.__class__.__name__ ) )
 
     def loop_timer_start( self ):
         self._loop_info.tmr_start = time.time()
 
     def loop_timer_end( self ):
-        logger = logging.getLogger( 'observer.timer' )
         loop_end = time.time()
         fps_actual_delta = loop_end - self._loop_info.tmr_start
 
@@ -28,9 +28,9 @@ class FPSTimer( object ):
             sleep_delay = self._fps_target_delta - fps_actual_delta
             time.sleep( sleep_delay )
         else:
-            logger.warning(
-                '%s took too long! %d seconds vs target %d (thread %d)',
-                    type( self.parent ), fps_actual_delta,
+            self.logger.warning(
+                'took too long! %d seconds vs target %d (thread %d)',
+                    fps_actual_delta,
                     self._fps_target_delta, threading.get_ident() )
 
         # Store duration in local loop data list, creating it if not existant
@@ -48,8 +48,8 @@ class FPSTimer( object ):
             avg_work = sum( x[0] for x in self._loop_info.durations ) / \
                 len( self._loop_info.durations )
 
-            logger.info( '%s fps: %d (thread %d)',
-                type( self.parent ), 1.0 / (avg_sleep + avg_work),
+            self.logger.debug( 'fps: %d (thread %d)',
+                1.0 / (avg_sleep + avg_work),
                 threading.get_ident() )
             self._loop_info.durations = []
 

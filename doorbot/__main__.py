@@ -163,6 +163,10 @@ def main():
         help='show debug messages on stdout' )
 
     verbosity_grp.add_argument(
+        '-m', '--metric', action='store_true',
+        help='show fps counts every so often on stdout' )
+
+    verbosity_grp.add_argument(
         '-q', '--quiet', action='store_true',
         help='be as silent as possible on stdout' )
 
@@ -192,13 +196,18 @@ def main():
         #logging.getLogger( 'doorbot.process' ).setLevel( logging.WARNING )
         #logging.getLogger( 'camera.process' ).setLevel( logging.WARNING )
         logging.getLogger( 'urllib3.connectionpool' ).setLevel( logging.WARNING )
+        logging.getLogger( 'fps.timer' ).setLevel( logging.WARNING )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
     elif args.quiet:
         logging.basicConfig( level=logging.ERROR )
     else:
         logging.basicConfig( level=logging.INFO )
         logging.getLogger( 'framelock' ).setLevel( logging.ERROR )
+        logging.getLogger( 'fps.timer' ).setLevel( logging.ERROR )
     logger = logging.getLogger( 'main' )
+
+    if args.metric:
+        logging.getLogger( 'fps.timer' ).setLevel( logging.DEBUG )
 
     try:
         smtp_server = urlparse( config.parser['exceptions']['smtpserver'] )
