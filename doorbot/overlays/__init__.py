@@ -30,6 +30,10 @@ class Overlays( threading.Thread ):
 
         return text
 
+    def text_height( self, text, **kwargs ): # pylint: disable=unused-argument
+
+        return 0
+
     def text( self, frame, text, position ): # pylint: disable=unused-argument
 
         ''' Draw text on the frame. This should be overridden by the
@@ -53,11 +57,13 @@ class Overlays( threading.Thread ):
 
         # Handle general kwargs.
         overlay_text = kwargs['overlay'] if 'overlay' in kwargs else ''
+        overlay_line_height = self.text_height( 'A', **kwargs )
         overlay_coords = \
             tuple( [int( x ) for x in kwargs['overlaycoords'].split( ',' )] ) \
             if 'overlaycoords' in kwargs else (10, 10)
-        overlay_line_height = int( kwargs['overlaylineheight'] ) \
-            if 'overlaylineheight' in kwargs else 20
+
+        # Bump coords down, since they start from text bottom.
+        overlay_coords = (overlay_coords[0], overlay_coords[1] + overlay_line_height)
 
         # Allow overlays to draw graphics.
         for overlay in self._overlays:
@@ -72,9 +78,8 @@ class Overlays( threading.Thread ):
             line = ''.join( c for c in line if c in \
                 'abcdefghijklmnopqrstuvwxyz' + \
                 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .></%$,:#@&*()?_-=+!' )
-            line = self.text( frame, line, origin, **kwargs )
-            # TODO: Measure text line for Y-height.
-            origin = (origin[0], origin[1] + overlay_line_height)
+            self.text( frame, line, origin, **kwargs )
+            origin = (origin[0], origin[1] + overlay_line_height + 5)
 
         return frame
 

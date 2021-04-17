@@ -19,6 +19,22 @@ class OpenCVOverlays( Overlays ):
 
         return frame
 
+    def text_height( self, text, **kwargs ):
+
+        overlay_font = \
+            getattr( cv2, 'FONT_{}'.format( kwargs['overlayfont'] ) ) \
+            if 'overlayfont' in kwargs else cv2.FONT_HERSHEY_SIMPLEX
+        overlay_scale = float( kwargs['overlayscale'] ) \
+            if 'overlayscale' in kwargs else 0.5
+        overlay_thickness = int( kwargs['overlaythickness'] ) \
+            if 'overlaythickness' in kwargs else 1
+
+        size = cv2.getTextSize(
+            text, fontFace=overlay_font, fontScale=overlay_scale,
+            thickness=overlay_thickness )
+
+        return size[0][1]
+
     def text( self, frame, text, position, **kwargs ):
 
         # Handle OpenCV-specific kwargs.
