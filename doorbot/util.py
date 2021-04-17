@@ -43,14 +43,14 @@ class FPSTimer( object ):
 
         if len( self._loop_info.durations ) > self.report_frames:
             # Sleep time + work time = total loop time.
-            #avg_sleep = sum( x[1] for x in self._loop_info.durations ) / \
-            #    len( self._loop_info.durations )
-            #avg_work = sum( x[0] for x in self._loop_info.durations ) / \
-            #    len( self._loop_info.durations )
+            avg_sleep = sum( x[1] for x in self._loop_info.durations ) / \
+                len( self._loop_info.durations )
+            avg_work = sum( x[0] for x in self._loop_info.durations ) / \
+                len( self._loop_info.durations )
 
-            #logger.debug( '%s fps: %d (thread %d)',
-            #    type( self.parent ), 1.0 / (avg_sleep + avg_work),
-            #    threading.get_ident() )
+            logger.info( '%s fps: %d (thread %d)',
+                type( self.parent ), 1.0 / (avg_sleep + avg_work),
+                threading.get_ident() )
             self._loop_info.durations = []
 
         return sleep_delay

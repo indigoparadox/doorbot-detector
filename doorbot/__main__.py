@@ -175,6 +175,10 @@ def main():
         metavar=('section', 'option', 'value'),
         help='specify a manual override for the given option' )
 
+    parser.add_argument(
+        '-f', '--fps', action='store', default=10.0,
+        help='master loop FPS' )
+
     args = parser.parse_args()
 
     if not args.option:
@@ -221,7 +225,7 @@ def main():
     #app.join()
     app = None
     try:
-        app = Doorbot( config )
+        app = Doorbot( config, fps=args.fps )
 
         app.run()
     except KeyboardInterrupt:
