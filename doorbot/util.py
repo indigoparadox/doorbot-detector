@@ -29,7 +29,7 @@ class FPSTimer( object ):
             time.sleep( sleep_delay )
         else:
             self.logger.warning(
-                'took too long! %d seconds vs target %d (thread %d)',
+                'took too long! %f seconds vs target %f (thread %d)',
                     fps_actual_delta,
                     self._fps_target_delta, threading.get_ident() )
 
