@@ -85,7 +85,7 @@ class Overlays( threading.Thread ):
                 try:
                     overlay.update()
                 except Exception as exc: # pylint: disable=broad-except
-                    self.logger.error( '%s: %s', type( exc ), exc )
+                    self.logger.exception( exc )
 
             time.sleep( self.refresh )
 

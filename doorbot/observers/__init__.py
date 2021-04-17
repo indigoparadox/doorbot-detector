@@ -2,6 +2,7 @@
 import logging
 import multiprocessing
 import threading
+from queue import Full
 from contextlib import contextmanager
 
 try:
@@ -39,7 +40,10 @@ class ObserverProc( multiprocessing.Process ):
 
     def set_frame( self, value ):
         #self._frame.set_frame( value )
-        self._frame_queue.put_nowait( value )
+        try:
+            self._frame_queue.put_nowait( value )
+        except Full:
+            self.logger.warning( 'queue full; skipping...' )
 
     def loop( self ):
 
@@ -64,7 +68,7 @@ class ObserverProc( multiprocessing.Process ):
         try:
             self.loop()
         except Exception as exc: #pylint: disable=broad-except
-            self.logger.error( '%s: %s: %s', type( self ), type( exc ), exc )
+            self.logger.exception( exc )
 
     def stop( self ):
         self._running = False

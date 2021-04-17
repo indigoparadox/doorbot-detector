@@ -4,7 +4,7 @@ import os
 import multiprocessing
 import shutil
 import time
-from queue import Empty
+from queue import Empty, Full
 from ftplib import FTP, FTP_TLS
 from ftplib import all_errors, error_perm
 from urllib.parse import urlparse
@@ -161,7 +161,10 @@ class CaptureWriterProcess( multiprocessing.Process ):
         self.frame_type = frame_type
 
     def add_frame( self, frame ):
-        self.frames.put_nowait( frame )
+        try:
+            self.frames.put_nowait( frame )
+        except Full:
+            self.logger.warning( 'queue full; skipping...' )
 
     def run( self ):
 
@@ -173,6 +176,7 @@ class CaptureWriterProcess( multiprocessing.Process ):
                 self.writer.frame_array.insert( 0, frame )
                 kickstart = False
             except Empty:
+                self.logger.warning( 'queue empty; skipping...' )
                 break
 
         self.logger.info( 'encoder thread received %d frames',

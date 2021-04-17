@@ -247,7 +247,7 @@ def main():
         sys.exit( 0 )
 
     except Exception as exc: # pylint: disable=broad-except
-        logger.error( '%s: %s', type( exc ), exc )
+        logger.exception( exc )
 
 if '__main__' == __name__:
     main()

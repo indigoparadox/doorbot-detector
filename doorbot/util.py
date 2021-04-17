@@ -127,7 +127,7 @@ class RWLock( object ):
         try:
             self._wrapped_abstraction = frame
         except Exception as exc: # pylint: disable=broad-except
-            self.logger.error( '%s: %s', type( exc ), exc )
+            self.logger.exception( exc )
         self._release_write()
 
     @contextmanager
