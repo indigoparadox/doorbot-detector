@@ -9,22 +9,24 @@ class Overlays( threading.Thread ):
     def __init__( self, **kwargs ):
         super().__init__()
         self.running = True
-        self._overlays = []
+        self._overlays = {}
         self.highlights = {}
         self.daemon = True
         self.logger = logging.getLogger( 'overlays' )
         self.refresh = kwargs['refresh'] if 'refresh' in kwargs else 5
 
-    def add_overlay( self, overlay ):
+    def add_overlay( self, key, overlay ):
         overlay.master = self
-        self._overlays.append( overlay )
+        self._overlays[key] = overlay
 
     def tokenize( self, text ):
 
         ''' Given a line of text (nominally specified in the config), replace
         tokens in it with tokens provided by loaded overlays. '''
 
-        for overlay in self._overlays:
+        for overlay_key in self._overlays:
+            # TODO: Limit to instances.
+            overlay = self._overlays[overlay_key]
             for token, replace in overlay.tokens.items():
                 text = text.replace( '<{}>'.format( token ), replace )
 
@@ -66,7 +68,9 @@ class Overlays( threading.Thread ):
         overlay_coords = (overlay_coords[0], overlay_coords[1] + overlay_line_height)
 
         # Allow overlays to draw graphics.
-        for overlay in self._overlays:
+        for overlay_key in self._overlays:
+            # TODO: Limit to instances.
+            overlay = self._overlays[overlay_key]
             overlay.draw( frame )
 
         # Draw text provided by simple text-only overlays.
@@ -86,7 +90,9 @@ class Overlays( threading.Thread ):
     def run( self ):
 
         while self.running:
-            for overlay in self._overlays:
+            for overlay_key in self._overlays:
+                # TODO: Limit to instances.
+                overlay = self._overlays[overlay_key]
                 try:
                     overlay.update()
                 except Exception as exc: # pylint: disable=broad-except

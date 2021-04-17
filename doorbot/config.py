@@ -24,12 +24,12 @@ class DoorbotConfig( object ):
         self.parser.read( config_path )
 
         self._config = {
-            'observers': [],
-            'cameras': [],
-            'detectors': [],
-            'overlays': [],
-            'capturers': [],
-            'notifiers': []
+            'observers': {},
+            'cameras': {},
+            'detectors': {},
+            'overlays': {},
+            'capturers': {},
+            'notifiers': {}
         }
 
         for section_name in self.parser.sections():
@@ -39,7 +39,7 @@ class DoorbotConfig( object ):
             instances = []
             try:
                 instances = self.parser[section_name]['instances'].split( ',' )
-            except:
+            except KeyError:
                 continue
 
             for instance in instances:
@@ -57,7 +57,10 @@ class DoorbotConfig( object ):
 
                     # Import module and stow config.
                     item_config['type'] = item_config['module'].PLUGIN_TYPE
-                    self._config[item_config['type']].append( item_config )
+
+                    assert( instance not in self._config[item_config['type']] )
+
+                    self._config[item_config['type']][instance] = item_config
 
     def __getitem__( self, key : str ):
         return self._config[key]
