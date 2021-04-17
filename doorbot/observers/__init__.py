@@ -25,6 +25,7 @@ class ObserverProc( multiprocessing.Process ):
         self._frame_queue = multiprocessing.Queue(
             maxsize=int( kwargs['queuesize'] ) \
                 if 'queuesize' in kwargs else 20 )
+        self.camera_key = kwargs['camera']
 
         # These are only defined for the subprocess, as they are only usable
         # on the other side of the queue.

@@ -50,7 +50,7 @@ class Overlays( threading.Thread ):
 
         return frame
 
-    def draw( self, frame, **kwargs ):
+    def draw( self, camera_key, frame, **kwargs ):
 
         ''' This should NOT be overridden directly, but the methods it uses
         (such as .text()) should be overridden by the implementation=specific
@@ -59,10 +59,10 @@ class Overlays( threading.Thread ):
 
         # Handle general kwargs.
         overlay_text = kwargs['overlay'] if 'overlay' in kwargs else ''
-        overlay_line_height = self.text_height( 'A', **kwargs )
         overlay_coords = \
             tuple( [int( x ) for x in kwargs['overlaycoords'].split( ',' )] ) \
             if 'overlaycoords' in kwargs else (10, 10)
+        overlay_line_height = self.text_height( 'A/,', **kwargs )
 
         # Bump coords down, since they start from text bottom.
         overlay_coords = (overlay_coords[0], overlay_coords[1] + overlay_line_height)
@@ -78,12 +78,14 @@ class Overlays( threading.Thread ):
         origin = overlay_coords
         for line in text:
             line = self.tokenize( line )
+            line = line.replace( '<camera>', camera_key )
+            #overlay_line_height = self.text_height( line, **kwargs )
             #line = self.filter.sub( '', line )
             line = ''.join( c for c in line if c in \
                 'abcdefghijklmnopqrstuvwxyz' + \
                 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .></%$,:#@&*()?_-=+!' )
             self.text( frame, line, origin, **kwargs )
-            origin = (origin[0], origin[1] + overlay_line_height + 5)
+            origin = (origin[0], origin[1] + overlay_line_height + 20)
 
         return frame
 

@@ -6,6 +6,7 @@ from logging.handlers import SMTPHandler
 from configparser import NoOptionError, NoSectionError
 #from threading import Thread
 from urllib.parse import urlparse
+from threading import Thread
 
 from doorbot.portability import image_to_jpeg, is_frame
 from doorbot.overlays.opencv import OpenCVOverlays
@@ -69,42 +70,90 @@ class Doorbot( object ):
             overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
             self.overlay_thread.add_overlay( overlay_key, overlay )
 
-        #try:
-        self.camera = \
-            config['cameras']['front']['module'].PLUGIN_CLASS(
-                **config['cameras']['front'] )
-        #except:
-        #    self.logger.error( 'at least one camera must be configured!' )
-        #    sys.exit( 1 )
+        self.cameras = {}
+        for camera_key in config['cameras']:
+            camera_cfg = config['cameras'][camera_key]
+            camera = camera_cfg['module'].PLUGIN_CLASS( **camera_cfg )
+            self.cameras[camera_key] = camera
 
-    def notify( self, subject, message, has_frame, frame=None ):
+    def notify( self, camera_key, subject, message, has_frame, frame=None ):
+
         for notifier_key in self.notifiers:
             # TODO: Limit to instances.
             notifier = self.notifiers[notifier_key]
+            if notifier.camera_key != camera_key:
+                continue
             notifier.send( subject, message )
-        if has_frame:
-            for notifier_key in self.notifiers:
-            # TODO: Limit to instances.
-                notifier = self.notifiers[notifier_key]
-                overlayed_frame = frame.copy()
-                overlayed_frame = self.overlay_thread.draw( overlayed_frame, **notifier.kwargs )
-                jpg = image_to_jpeg( overlayed_frame )
-                notifier.snapshot( subject, jpg )
 
-    def capture( self, frame ):
+        if not has_frame:
+            return
+
+        for notifier_key in self.notifiers:
+            # TODO: Limit to instances.
+            notifier = self.notifiers[notifier_key]
+            if notifier.camera_key != camera_key:
+                continue
+            overlayed_frame = frame.copy()
+            overlayed_frame = self.overlay_thread.draw( camera_key, overlayed_frame, **notifier.kwargs )
+            jpg = image_to_jpeg( overlayed_frame )
+            notifier.snapshot( subject, jpg )
+
+    def capture( self, camera_key, frame ):
         for capturer_key in self.capturers:
             # TODO: Limit to instances.
             capturer = self.capturers[capturer_key]
+            if capturer.camera_key != camera_key:
+                continue
             if is_frame( frame ):
                 overlayed_frame = frame.copy()
                 overlayed_frame = \
                     self.overlay_thread.draw(
-                        overlayed_frame, **capturer.kwargs )
+                        camera_key, overlayed_frame, **capturer.kwargs )
                 capturer.handle_motion_frame( overlayed_frame )
             else:
                 # We get passed "None" if we just want to update capturer
                 # grace frames, etc.
                 capturer.handle_motion_frame( None )
+
+    def run_camera( self, camera_key ):
+        camera = self.cameras[camera_key]
+
+        self.timer.loop_timer_start()
+
+        # Spin until we have a new frame to process.
+        if not camera.ready:
+            #self.logger.debug( 'waiting for frame...' )
+            self.timer.loop_timer_end()
+            return
+
+        # The camera provides a copy while using the proper locks.
+        frame = camera.frame
+
+        for observer_key in self.observer_procs:
+            # TODO: Limit to instances.
+            observer = self.observer_procs[observer_key]
+            if observer.camera_key != camera_key:
+                continue
+            overlayed_frame = frame.copy()
+            overlayed_frame = self.overlay_thread.draw(
+                camera_key, overlayed_frame, **observer.kwargs )
+            observer.set_frame( overlayed_frame )
+
+        for detector_key in self.detectors:
+            # TODO: Limit to instances.
+            detector = self.detectors[detector_key]
+            event = detector.detect( frame )
+            if detector.camera_key != camera_key:
+                continue
+            if event and 'movement' == event.event_type:
+                self.capture( camera_key, frame )
+                self.notify( camera_key, 'movement', '{} at {}'.format(
+                    event.dimensions, event.position ), True, frame=frame )
+            else:
+                # No motion frames were found, digest capture pipeline.
+                self.capture( camera_key, None )
+
+        self.timer.loop_timer_end()
 
     def run( self ):
 
@@ -113,7 +162,8 @@ class Doorbot( object ):
 
         self.logger.debug( 'starting main loop...' )
 
-        self.camera.start()
+        for camera_key in self.cameras:
+            self.cameras[camera_key].start()
 
         self.overlay_thread.start()
 
@@ -121,52 +171,9 @@ class Doorbot( object ):
             proc = self.observer_procs[observer_key]
             proc.start()
 
-        frame = None
-        overlayed_frame = None
-        event = None
-
         while self.running:
-            self.timer.loop_timer_start()
-
-            # Spin until we have a new frame to process.
-            if not self.camera.ready:
-                #self.logger.debug( 'waiting for frame...' )
-                self.timer.loop_timer_end()
-                continue
-            #elif self.camera.frame_stale:
-            #    self.stale_frames += 1
-            #    self.timer.loop_timer_end()
-            #    continue
-
-            #logger.debug( 'processing frame...' )
-            #if self.stale_frames:
-            #    #self.logger.debug( 'skipped %d stale frames', self.stale_frames )
-            #    self.stale_frames = 0
-
-            # The camera provides a copy while using the proper locks.
-            frame = self.camera.frame
-
-            for observer_key in self.observer_procs:
-                # TODO: Limit to instances.
-                observer = self.observer_procs[observer_key]
-                overlayed_frame = frame.copy()
-                overlayed_frame = self.overlay_thread.draw(
-                    overlayed_frame, **observer.kwargs )
-                observer.set_frame( overlayed_frame )
-
-            for detector_key in self.detectors:
-                # TODO: Limit to instances.
-                detector = self.detectors[detector_key]
-                event = detector.detect( frame )
-                if event and 'movement' == event.event_type:
-                    self.capture( frame )
-                    self.notify( 'movement', '{} at {}'.format(
-                        event.dimensions, event.position ), True, frame=frame )
-                else:
-                    # No motion frames were found, digest capture pipeline.
-                    self.capture( None )
-
-            self.timer.loop_timer_end()
+            for camera_key in self.cameras:
+                self.run_camera( camera_key )
 
 def main():
 

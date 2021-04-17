@@ -14,17 +14,19 @@ class MotionDetector( Detector ):
     ''' Specialized detector that looks for motion accross frames. '''
 
     def __init__( self, **kwargs ):
+        
+        super().__init__( **kwargs )
 
-        logger = logging.getLogger( 'detector.motion.init' )
+        self.logger = logging.getLogger( 'detector.motion' )
 
-        logger.debug( 'setting up motion detector...' )
+        self.logger.debug( 'setting up motion detector...' )
 
         # Grab configuration params.
         self.min_w = int( kwargs['minw'] ) if 'minw' in kwargs else 0
         self.min_h = int( kwargs['minh'] ) if 'minh' in kwargs else 0
         self.ignore_edges = True if 'ignoreedges' in kwargs and \
             'true' == kwargs['ignoreedges'] else False
-        logger.debug( 'minimum movement size: %dx%d, ignore edges: %d',
+        self.logger.debug( 'minimum movement size: %dx%d, ignore edges: %d',
             self.min_w, self.min_h, self.ignore_edges )
         self.wait_max = int( kwargs['waitmax'] ) \
             if 'waitmax' in kwargs else 5
@@ -41,8 +43,8 @@ class MotionDetector( Detector ):
             detectShadows=True )
         self.kernel = numpy.ones( (20, 20), numpy.uint8 )
 
-        logger.debug( 'threshold: %d', self.threshold )
-        logger.debug( 'blur: %d', self.blur )
+        self.logger.debug( 'threshold: %d', self.threshold )
+        self.logger.debug( 'blur: %d', self.blur )
 
     def handle_movement( self, frame : numpy.ndarray, rect_x, rect_y, rect_w, rect_h ):
 

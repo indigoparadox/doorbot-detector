@@ -26,14 +26,15 @@ class Capture( object ):
         self.writer = None
         self.frame_type = frame_type
         self.kwargs = kwargs
+        self.camera_key = kwargs['camera']
 
     def create_or_append_to_writer( self, frame, writer_type ):
         if None == self.writer:
             timestamp = datetime.now().strftime( self.ts_format )
-            writer = writer_type( timestamp,
+            writer = writer_type( self.camera_key, timestamp,
                 frame.shape[1], frame.shape[0], **self.kwargs )
             if self.multiproc:
-                self.writer = CaptureWriterProcess( writer, self.frame_type )
+                self.writer = CaptureWriterProcess( self.camera_key, writer, self.frame_type )
             else:
                 self.writer = writer
 
@@ -54,10 +55,11 @@ class Capture( object ):
 
 class CaptureWriter( object ):
 
-    def __init__( self, timestamp : str, width, height, **kwargs ):
+    def __init__( self, camera_key, timestamp : str, width, height, **kwargs ):
 
-        self.logger = logging.getLogger( 'capture.writer' )
+        self.logger = logging.getLogger( 'capture.writer.{}'.format( camera_key ) )
 
+        self.camera_key = camera_key
         self.timestamp = timestamp
         self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
             '%Y-%m-%d-%H-%M-%S-%f'
@@ -152,13 +154,14 @@ class CaptureWriter( object ):
             ftp.storbinary( 'STOR {}'.format( dest_filename ), upload_file )
 
 class CaptureWriterProcess( multiprocessing.Process ):
-    def __init__( self, writer : CaptureWriter, frame_type : type ):
+    def __init__( self, camera_key, writer : CaptureWriter, frame_type : type ):
         super().__init__()
         self.frames = multiprocessing.Queue()
         self.writer = writer
         self.writer.process = self
-        self.logger = logging.getLogger( 'capture.process' )
+        self.logger = logging.getLogger( 'capture.process.{}'.format( camera_key ) )
         self.frame_type = frame_type
+        self.camera_key = camera_key
 
     def add_frame( self, frame ):
         try:

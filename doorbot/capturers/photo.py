@@ -12,10 +12,10 @@ from doorbot.capturers import Capture, CaptureWriter
 
 class PhotoCaptureWriter( CaptureWriter ):
 
-    def __init__( self, timestamp, width, height, **kwargs ):
-        super().__init__( timestamp, width, height, **kwargs )
+    def __init__( self, camera_key, timestamp, width, height, **kwargs ):
+        super().__init__( camera_key, timestamp, width, height, **kwargs )
 
-        self.logger = logging.getLogger('capture.photo' )
+        self.logger = logging.getLogger('capture.photo.{}'.format( camera_key ) ) 
 
         self.logger.info( 'creating photo writer for %s.jpg...',
             os.path.join( self.path, self.timestamp ) )

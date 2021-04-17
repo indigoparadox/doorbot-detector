@@ -31,7 +31,7 @@ class OpenCVOverlays( Overlays ):
 
         size = cv2.getTextSize(
             text, fontFace=overlay_font, fontScale=overlay_scale,
-            thickness=overlay_thickness )
+            thickness=overlay_thickness * 4 )
 
         return size[0][1]
 
@@ -51,7 +51,7 @@ class OpenCVOverlays( Overlays ):
 
         cv2.putText(
             frame, text, position, overlay_font,
-            overlay_scale, (0, 0, 0), overlay_thickness * 2,
+            overlay_scale, (0, 0, 0), overlay_thickness * 4,
             cv2.LINE_AA )
 
         cv2.putText(
