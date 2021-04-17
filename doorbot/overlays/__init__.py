@@ -28,7 +28,7 @@ class Overlays( threading.Thread ):
             # TODO: Limit to instances.
             overlay = self._overlays[overlay_key]
             for token, replace in overlay.tokens.items():
-                text = text.replace( '<{}>'.format( token ), replace )
+                text = text.replace( '<{}.{}>'.format( token, overlay_key ), replace )
 
         return text
 
@@ -91,7 +91,6 @@ class Overlays( threading.Thread ):
 
         while self.running:
             for overlay_key in self._overlays:
-                # TODO: Limit to instances.
                 overlay = self._overlays[overlay_key]
                 try:
                     overlay.update()

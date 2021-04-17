@@ -44,6 +44,8 @@ class DoorbotConfig( object ):
 
             for instance in instances:
 
+                assert( '.' not in instance )
+
                 item_config = dict( self.parser.items( 'instance.{}.{}'.format(
                     section_name, instance ) ) )
 
