@@ -7,9 +7,9 @@ from urllib.parse import urlparse
 from doorbot.notifiers import Notifier
 
 class LoggerNotifier( Notifier ):
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
 
-        super().__init__( **kwargs )
+        super().__init__( instance_name, **kwargs )
 
         self.logger = logging.getLogger( 'notification' )
 

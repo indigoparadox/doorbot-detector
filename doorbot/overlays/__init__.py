@@ -15,9 +15,10 @@ class Overlays( threading.Thread ):
         self.logger = logging.getLogger( 'overlays' )
         self.refresh = kwargs['refresh'] if 'refresh' in kwargs else 5
 
-    def add_overlay( self, key, overlay ):
+    def add_overlay( self, instance_name, overlay ):
         overlay.master = self
-        self._overlays[key] = overlay
+        assert( overlay.instance_name == instance_name )
+        self._overlays[instance_name] = overlay
 
     def tokenize( self, text ):
 
@@ -70,7 +71,7 @@ class Overlays( threading.Thread ):
         # Allow overlays to draw graphics.
         for overlay_key in self._overlays:
             # TODO: Limit to instances.
-            overlay = self._overlays[overlay_key]
+            overlay = self._overlays[overlay_key] 
             overlay.draw( frame )
 
         # Draw text provided by simple text-only overlays.
@@ -106,9 +107,10 @@ class Overlays( threading.Thread ):
 
 class OverlayHandler( object ):
 
-    def __init__( self, **kwargs ): # pylint: disable=unused-argument
+    def __init__( self, instance_name, **kwargs ): # pylint: disable=unused-argument
         self.current = ''
         self.master = None
+        self.instance_name = instance_name
 
     @property
     def tokens( self ):

@@ -14,10 +14,10 @@ from doorbot.portability import is_frame
 from doorbot.capturers import Capture, CaptureWriter
 
 class VideoCaptureWriter( CaptureWriter ):
-    def __init__( self, camera_key, timestamp, width, height, **kwargs ):
-        super().__init__( camera_key, timestamp, width, height, **kwargs )
+    def __init__( self, instance_name, timestamp, width, height, **kwargs ):
+        super().__init__( instance_name, timestamp, width, height, **kwargs )
 
-        self.logger = logging.getLogger('capture.video.{}'.format( camera_key ) )
+        self.logger = logging.getLogger('capture.video.{}'.format( instance_name ) )
 
         self.fps = float( kwargs['fps'] ) if 'fps' in kwargs else 15.0
         self.fourcc = kwargs['fourcc'] if 'fourcc' in kwargs else 'mp4v'
@@ -66,10 +66,10 @@ class VideoCaptureWriter( CaptureWriter ):
 
 class VideoCapture( Capture ):
 
-    def __init__( self, **kwargs ):
-        super().__init__( numpy.ndarray, **kwargs )
+    def __init__( self, instance_name, **kwargs ):
+        super().__init__( instance_name, numpy.ndarray, **kwargs )
 
-        self.logger = logging.getLogger( 'capture.video.{}'.format( self.camera_key) )
+        self.logger = logging.getLogger( 'capture.video.{}'.format( self.instance_name ) )
         self.logger.info( 'setting up video capture...' )
 
         self.max_frames = int( kwargs['maxframes'] ) \

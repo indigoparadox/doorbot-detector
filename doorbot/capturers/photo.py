@@ -12,10 +12,10 @@ from doorbot.capturers import Capture, CaptureWriter
 
 class PhotoCaptureWriter( CaptureWriter ):
 
-    def __init__( self, camera_key, timestamp, width, height, **kwargs ):
-        super().__init__( camera_key, timestamp, width, height, **kwargs )
+    def __init__( self, instance_name, timestamp, width, height, **kwargs ):
+        super().__init__( instance_name, timestamp, width, height, **kwargs )
 
-        self.logger = logging.getLogger('capture.photo.{}'.format( camera_key ) ) 
+        self.logger = logging.getLogger('capture.photo.{}'.format( instance_name ) ) 
 
         self.logger.info( 'creating photo writer for %s.jpg...',
             os.path.join( self.path, self.timestamp ) )
@@ -33,8 +33,8 @@ class PhotoCaptureWriter( CaptureWriter ):
 
 class PhotoCapture( Capture ):
 
-    def __init__( self, **kwargs ):
-        super().__init__( numpy.ndarray, **kwargs )
+    def __init__( self, instance_name, **kwargs ):
+        super().__init__( instance_name, numpy.ndarray, **kwargs )
 
     def handle_motion_frame( self, frame : numpy.ndarray ):
 

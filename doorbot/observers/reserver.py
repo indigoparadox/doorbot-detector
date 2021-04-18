@@ -93,24 +93,24 @@ class Reserver( ThreadingMixIn, HTTPServer ):
 
     ''' This serves an mjpeg stream with what the detector sees. '''
 
-    def __init__( self, thread, fps, *args, **kwargs ):
+    def __init__( self, thread, instance_name, fps, *args, **kwargs ):
         super().__init__( *args, **kwargs )
 
         self.daemon_threads = True
-        self.logger = logging.getLogger( 'observer.reserver' )
+        self.logger = logging.getLogger( 'observer.reserver.{}'.format( instance_name ) )
         self.fps = fps
 
         self.proc = thread
 
 class ReserverProc( ObserverProc ):
 
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
 
         #logger = logging.getLogger( 'observer.reserver.init' )
 
         #logger.debug( 'setting up reserver...' )
 
-        super().__init__( **kwargs )
+        super().__init__( instance_name, **kwargs )
         self._hostname = kwargs['listen'] if 'listen' in kwargs else '0.0.0.0'
         self._port = int( kwargs['port'] ) if 'port' in kwargs else 8888
         self._server : Reserver
@@ -122,7 +122,8 @@ class ReserverProc( ObserverProc ):
         #logger.debug( 'starting reserver...' )
 
         self.logger.info( 'setting up reserver on port %d...', self._port )
-        self._server = Reserver( self, self.fps, (self._hostname, self._port), ReserverHandler )
+        self._server = Reserver( self, self.instance_name, self.fps,
+            (self._hostname, self._port), ReserverHandler )
 
         self._server.serve_forever()
         self.running = False

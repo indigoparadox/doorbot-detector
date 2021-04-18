@@ -13,11 +13,11 @@ class MotionDetector( Detector ):
 
     ''' Specialized detector that looks for motion accross frames. '''
 
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
         
-        super().__init__( **kwargs )
+        super().__init__( instance_name, **kwargs )
 
-        self.logger = logging.getLogger( 'detector.motion' )
+        self.logger = logging.getLogger( 'detector.motion.{}'.format( instance_name ) )
 
         self.logger.debug( 'setting up motion detector...' )
 

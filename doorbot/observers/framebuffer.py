@@ -10,9 +10,9 @@ except ImportError:
 
 class FramebufferProc( ObserverProc ):
 
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
 
-        super().__init__( **kwargs )
+        super().__init__( instance_name, **kwargs )
 
         self.logger = logging.getLogger( 'observer.framebuffer' )
 

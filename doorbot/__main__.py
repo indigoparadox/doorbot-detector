@@ -35,7 +35,7 @@ class Doorbot( object ):
 
         for notifier_key in config['notifiers']:
             notifier_cfg = config['notifiers'][notifier_key]
-            notifier = notifier_cfg['module'].PLUGIN_CLASS( **notifier_cfg )
+            notifier = notifier_cfg['module'].PLUGIN_CLASS( notifier_key, **notifier_cfg )
             self.notifiers[notifier_key] = notifier
 
         # Add capturer utilities.
@@ -44,7 +44,7 @@ class Doorbot( object ):
 
         for capturer_key in config['capturers']:
             capturer_cfg = config['capturers'][capturer_key]
-            capturer = capturer_cfg['module'].PLUGIN_CLASS( **capturer_cfg )
+            capturer = capturer_cfg['module'].PLUGIN_CLASS( capturer_key, **capturer_cfg )
             self.capturers[capturer_key] = capturer
 
         # Setup the detector and observer satellite threads.
@@ -53,27 +53,27 @@ class Doorbot( object ):
 
         for observer_key in config['observers']:
             observer_cfg = config['observers'][observer_key]
-            observer = observer_cfg['module'].PLUGIN_CLASS( **observer_cfg )
+            observer = observer_cfg['module'].PLUGIN_CLASS( observer_key, **observer_cfg )
             self.observer_procs[observer_key] = observer
 
         self.detectors = {}
 
         for detector_key in config['detectors']:
             detector_cfg = config['detectors'][detector_key]
-            detector = detector_cfg['module'].PLUGIN_CLASS( **detector_cfg )
+            detector = detector_cfg['module'].PLUGIN_CLASS( detector_key, **detector_cfg )
             self.detectors[detector_key] = detector
 
         self.overlay_thread = OpenCVOverlays()
 
         for overlay_key in config['overlays']:
             overlay_cfg = config['overlays'][overlay_key]
-            overlay = overlay_cfg['module'].PLUGIN_CLASS( **overlay_cfg )
+            overlay = overlay_cfg['module'].PLUGIN_CLASS( overlay_key, **overlay_cfg )
             self.overlay_thread.add_overlay( overlay_key, overlay )
 
         self.cameras = {}
         for camera_key in config['cameras']:
             camera_cfg = config['cameras'][camera_key]
-            camera = camera_cfg['module'].PLUGIN_CLASS( **camera_cfg )
+            camera = camera_cfg['module'].PLUGIN_CLASS( camera_key, **camera_cfg )
             self.cameras[camera_key] = camera
 
     def notify( self, camera_key, subject, message, has_frame, frame=None ):

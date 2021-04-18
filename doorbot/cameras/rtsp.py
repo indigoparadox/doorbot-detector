@@ -8,13 +8,13 @@ from doorbot.cameras import Camera
 
 class RTSP( Camera ):
 
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
 
         self.attempts = 0
         self.cam_url = kwargs['url']
         self._stream = cv2.VideoCapture( self.cam_url )
 
-        super().__init__( **kwargs )
+        super().__init__( instance_name, **kwargs )
 
     def run( self ):
 

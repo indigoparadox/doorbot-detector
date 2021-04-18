@@ -11,8 +11,8 @@ from doorbot.overlays import OverlayHandler
 
 class WeatherOverlay( OverlayHandler ):
 
-    def __init__( self, **kwargs ):
-        super().__init__( **kwargs )
+    def __init__( self, instance_name, **kwargs ):
+        super().__init__( instance_name, **kwargs )
         self.logger = logging.getLogger( 'overlay.weather' )
         self.url = kwargs['url']
         self.refresh = float( kwargs['refresh'] ) if 'refresh' in kwargs else \

@@ -14,18 +14,19 @@ from ..util import FPSTimer, FrameLock
 
 class ObserverProc( multiprocessing.Process ):
 
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
         super().__init__()
         self.daemon = True
         self._frame = FrameLock()
         self.timer = FPSTimer( self, **kwargs )
         self._running = True
         self._frame_update_thread : threading.Thread
-        self.logger = logging.getLogger( 'observer' )
+        self.logger = logging.getLogger( 'observer.{}'.format( instance_name ) )
         self._frame_queue = multiprocessing.Queue(
             maxsize=int( kwargs['queuesize'] ) \
                 if 'queuesize' in kwargs else 20 )
         self.camera_key = kwargs['camera']
+        self.instance_name = instance_name
 
         # These are only defined for the subprocess, as they are only usable
         # on the other side of the queue.

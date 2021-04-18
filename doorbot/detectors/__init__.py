@@ -22,9 +22,10 @@ class Detector( object ):
     should be subclassed by specialized detectors that use various means to
     determine activity in an image. '''
 
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
 
         self.camera_key = kwargs['camera']
+        self.instance_name = instance_name
 
     def detect( self, frame ):
 

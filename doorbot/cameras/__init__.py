@@ -14,13 +14,14 @@ class Camera( multiprocessing.Process ):
     ''' This should run in the background and keep the stream moving so we
     don't waste time processing old frames. '''
 
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
         super().__init__()
 
-        self.logger = logging.getLogger( 'camera' )
+        self.logger = logging.getLogger( 'camera.{}'.format( instance_name ) )
 
         self.logger.debug( 'setting up camera...' )
 
+        self.instance_name = instance_name
         self.width = 0
         self.height = 0
         self.running = True

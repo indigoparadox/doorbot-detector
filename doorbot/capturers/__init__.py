@@ -14,7 +14,7 @@ class Capture( object ):
 
     ''' Abstract module for capturing and storing frames for archival. '''
 
-    def __init__( self, frame_type : type, **kwargs ):
+    def __init__( self, instance_name, frame_type : type, **kwargs ):
 
         self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
             '%Y-%m-%d-%H-%M-%S-%f'
@@ -26,15 +26,16 @@ class Capture( object ):
         self.writer = None
         self.frame_type = frame_type
         self.kwargs = kwargs
+        self.instance_name = instance_name
         self.camera_key = kwargs['camera']
 
     def create_or_append_to_writer( self, frame, writer_type ):
         if None == self.writer:
             timestamp = datetime.now().strftime( self.ts_format )
-            writer = writer_type( self.camera_key, timestamp,
+            writer = writer_type( self.instance_name, timestamp,
                 frame.shape[1], frame.shape[0], **self.kwargs )
             if self.multiproc:
-                self.writer = CaptureWriterProcess( self.camera_key, writer, self.frame_type )
+                self.writer = CaptureWriterProcess( self.instance_name, writer, self.frame_type )
             else:
                 self.writer = writer
 
@@ -55,11 +56,11 @@ class Capture( object ):
 
 class CaptureWriter( object ):
 
-    def __init__( self, camera_key, timestamp : str, width, height, **kwargs ):
+    def __init__( self, instance_name, timestamp : str, width, height, **kwargs ):
 
-        self.logger = logging.getLogger( 'capture.writer.{}'.format( camera_key ) )
+        self.logger = logging.getLogger( 'capture.writer.{}'.format( instance_name ) )
 
-        self.camera_key = camera_key
+        self.instance_name = instance_name
         self.timestamp = timestamp
         self.ts_format = kwargs['tsformat'] if 'tsformat' in kwargs else \
             '%Y-%m-%d-%H-%M-%S-%f'
@@ -154,14 +155,14 @@ class CaptureWriter( object ):
             ftp.storbinary( 'STOR {}'.format( dest_filename ), upload_file )
 
 class CaptureWriterProcess( multiprocessing.Process ):
-    def __init__( self, camera_key, writer : CaptureWriter, frame_type : type ):
+    def __init__( self, instance_name, writer : CaptureWriter, frame_type : type ):
         super().__init__()
         self.frames = multiprocessing.Queue()
         self.writer = writer
         self.writer.process = self
-        self.logger = logging.getLogger( 'capture.process.{}'.format( camera_key ) )
+        self.logger = logging.getLogger( 'capture.process.{}'.format( instance_name ) )
         self.frame_type = frame_type
-        self.camera_key = camera_key
+        self.instance_name = instance_name
 
     def add_frame( self, frame ):
         try:

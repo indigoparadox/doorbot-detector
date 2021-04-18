@@ -10,11 +10,11 @@ from paho.mqtt import client as mqtt_client
 from doorbot.notifiers import Notifier
 
 class MQTTNotifier( Notifier ):
-    def __init__( self, **kwargs ):
+    def __init__( self, instance_name, **kwargs ):
 
-        super().__init__( **kwargs )
+        super().__init__( instance_name, **kwargs )
 
-        self.logger = logging.getLogger( 'mqtt' )
+        self.logger = logging.getLogger( 'mqtt.{}'.format( instance_name ) )
 
         self.snapshots = True if 'snapshots' in kwargs \
             and 'true' == kwargs['snapshots'] else False
