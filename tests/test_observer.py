@@ -2,9 +2,7 @@
 import os
 import sys
 import unittest
-import logging
-from unittest import mock
-from unittest.mock import patch, Mock, MagicMock, NonCallableMagicMock
+from unittest.mock import patch, Mock, MagicMock
 from contextlib import contextmanager
 
 from faker import Faker
@@ -34,9 +32,13 @@ class TestObserver( unittest.TestCase ):
     def create_reserver_handler( self, path, frame, remote_addr='127.0.0.1' ):
         ReserverHandler.__init__ = lambda w, x, y, z: None
         reserver = ReserverHandler( b'', ('', 0), None )
-        reserver.server = Mock()
+        reserver.server = MagicMock()
         reserver.server.logger = Mock()
-        reserver.server.proc = ReserverProc()
+        server_args = {
+            'fps': '15.0'
+        }
+        reserver.server.kwargs.__getitem__.side_effect = server_args.__getitem__
+        reserver.server.proc = ReserverProc( 'test_reserver', camera='test', fps='5.0' )
         reserver.server.proc.get_frame = MagicMock()
         get_frame = reserver.server.proc.get_frame.return_value
         get_frame.__enter__ = MagicMock( return_value=frame )
@@ -53,10 +55,10 @@ class TestObserver( unittest.TestCase ):
 
     def test_framebuffer( self ):
         with patch( 'builtins.open' ) as mock_fb:
-            frame = self.fake.random_image( 640, 480 )
+            frame = self.fake.random_image( 640, 480 ) # pylint: disable=no-member
 
             # Prepare the framebuffer.
-            fb = FramebufferProc( width=320, height=240 )
+            fb = FramebufferProc( 'test_fb', camera='test', width=320, height=240 )
             fb.get_frame = MagicMock()
             get_frame = fb.get_frame.return_value
             get_frame.__enter__ = MagicMock( return_value=frame )
@@ -80,7 +82,7 @@ class TestObserver( unittest.TestCase ):
 
     def test_reserver_jpg( self ):
 
-        frame = self.fake.random_image( 640, 480 )
+        frame = self.fake.random_image( 640, 480 ) # pylint: disable=no-member
         reserver = self.create_reserver_handler( '/test.jpg', frame )
         jpg_test = image_to_jpeg( frame )
         reserver.do_GET()
@@ -88,7 +90,7 @@ class TestObserver( unittest.TestCase ):
 
     def test_reserver_mjpg( self ):
 
-        frame = self.fake.random_image( 640, 480 )
+        frame = self.fake.random_image( 640, 480 ) # pylint: disable=no-member
         reserver = self.create_reserver_handler( '/test.mjpg', frame )
         jpg_test = image_to_jpeg( frame )
         reserver.do_GET()

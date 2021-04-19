@@ -28,7 +28,8 @@ class TestDetector( unittest.TestCase ):
             'fps': '5.0',
             'width': '640',
             'height': '480',
-            'ignoreedges': 'false' }
+            'ignoreedges': 'false',
+            'camera': 'test' }
 
         return super().setUp()
 
@@ -37,14 +38,14 @@ class TestDetector( unittest.TestCase ):
 
     def test_handle_motion( self ):
 
-        detector = MotionDetector( **self.motion_detector_config )
+        detector = MotionDetector( 'test_detector', **self.motion_detector_config )
         dimensions = [
             int( self.motion_detector_config['width'] ),
             int( self.motion_detector_config['height'] )]
-        image = self.fake.random_image( *dimensions )
+        image = self.fake.random_image( *dimensions ) # pylint: disable=no-member
 
         for i in range( 20 ):
-            rect = self.fake.frame_rect( self.motion_detector_config )
+            rect = self.fake.frame_rect( self.motion_detector_config ) # pylint: disable=no-member
             event = detector.handle_movement( image, *rect )
 
             self.assertTrue( isinstance( event, DetectionEvent ) )
@@ -54,13 +55,13 @@ class TestDetector( unittest.TestCase ):
 
     def test_detect_motion( self ):
 
-        detector = MotionDetector( **self.motion_detector_config )
+        detector = MotionDetector( 'test_detector', **self.motion_detector_config )
 
         for i in range( 20 ):
             dimensions = [
                 int( self.motion_detector_config['width'] ),
                 int( self.motion_detector_config['height'] )]
-            image = self.fake.random_image( *dimensions )
+            image = self.fake.random_image( *dimensions ) # pylint: disable=no-member
             event = detector.detect( image )
 
             self.assertTrue( isinstance( event, DetectionEvent ) )
@@ -69,12 +70,12 @@ class TestDetector( unittest.TestCase ):
 
     def test_detect_no_motion( self ):
 
-        detector = MotionDetector( **self.motion_detector_config )
+        detector = MotionDetector( 'test_detector', **self.motion_detector_config )
 
         dimensions = [
             int( self.motion_detector_config['width'] ),
             int( self.motion_detector_config['height'] )]
-        image = self.fake.random_image( *dimensions )
+        image = self.fake.random_image( *dimensions ) # pylint: disable=no-member
 
         # Detect once to set the baseline.
         detector.detect( image )

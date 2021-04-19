@@ -65,10 +65,12 @@ class TestNotifier( unittest.TestCase ):
             mock_instance = mock_mqtt.Client.return_value
             mock_time.return_value = 1024.1028
 
-            frame = self.fake.random_image( 320, 240 )
+            frame = self.fake.random_image( 320, 240 ) # pylint: disable=no-member
             frame_jpg = image_to_jpeg( frame )
 
             notifier = doorbot.notifiers.mqtt.MQTTNotifier(
+                'test_notifier',
+                camera='test',
                 uid='testuid',
                 url='mqtt://localhost:1883/testtopic',
                 snapshottopic='testtopic/snapshot',
@@ -95,10 +97,11 @@ class TestNotifier( unittest.TestCase ):
         doorbot.notifiers.logger.logging = mock_log
 
         args = {
-            'enable': 'true'
+            'enable': 'true',
+            'camera': 'test'
         }
 
-        notifier = doorbot.notifiers.logger.LoggerNotifier( **args )
+        notifier = doorbot.notifiers.logger.LoggerNotifier( 'test_notifier', **args )
         notifier.send( 'Test', 'Test Notify' )
 
         logger = mock_log.getLogger.return_value

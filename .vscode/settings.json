@@ -19,5 +19,6 @@
         "**/.hg/store/**": true,
         "**/env/**": true,
         "**/snapshots/**": true
-    }
+    },
+    "cmake.configureOnOpen": false
 }

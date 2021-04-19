@@ -1,6 +1,4 @@
 
-from datetime import datetime
-from doorbot.capturers import Capture, CaptureWriter
 import os
 import sys
 import unittest
@@ -9,7 +7,8 @@ import re
 import tempfile
 import shutil
 import random
-from threading import Thread, local
+from datetime import datetime
+from threading import Thread
 
 import memunit
 from faker import Faker
@@ -21,6 +20,7 @@ from hachoir.metadata import extractMetadata
 
 sys.path.insert( 0, os.path.dirname( os.path.dirname( __file__) ) )
 
+from doorbot.capturers import CaptureWriter
 from doorbot.capturers.video import VideoCapture
 from doorbot.capturers.photo import PhotoCapture
 from doorbot.portability import image_to_jpeg
@@ -67,7 +67,7 @@ class TestCapture( unittest.TestCase ):
             os.unlink( self.temp_upload_file_path )
 
     def test_capture_upload( self ):
-        frame_jpg = image_to_jpeg( self.fake.random_image( 640, 480 ) )
+        frame_jpg = image_to_jpeg( self.fake.random_image( 640, 480 ) ) # pylint: disable=no-member
         self.temp_upload_file_path = tempfile.mktemp( suffix='.jpg' )
         with open( self.temp_upload_file_path, 'wb' ) as temp_file:
             temp_file.write( frame_jpg )
@@ -79,7 +79,7 @@ class TestCapture( unittest.TestCase ):
         capturer_args = {
             'path': ftp_path
         }
-        capturer = CaptureWriter( nowstamp, 640, 480, **capturer_args )
+        capturer = CaptureWriter( 'test_capture', nowstamp, 640, 480, **capturer_args )
         capturer.upload_ftp( self.temp_upload_file_path )
 
         # Verify file was uploaded correctly.
@@ -95,20 +95,21 @@ class TestCapture( unittest.TestCase ):
 
     def test_capture_photo( self ):
 
-        with self.fake.directory() as capture_path:
+        with self.fake.directory() as capture_path: # pylint: disable=no-member
 
             config = {
                 'enable': 'true',
                 'backuppath': capture_path,
                 'path': capture_path,
-                'multiproc': 'false'
+                'multiproc': 'false',
+                'camera': 'test'
             }
 
-            capturer = PhotoCapture( **config )
+            capturer = PhotoCapture( 'test_capture', **config )
 
             for i in range( 10 ):
                 frame = None
-                frame = self.fake.random_image( 640, 480 )
+                frame = self.fake.random_image( 640, 480 ) # pylint: disable=no-member
                 capturer.handle_motion_frame( frame )
 
             capturer.finalize_motion( None )
@@ -118,7 +119,7 @@ class TestCapture( unittest.TestCase ):
     @memunit.assert_lt_mb( 300 )
     def test_capture_video( self ):
 
-        with self.fake.directory() as capture_path:
+        with self.fake.directory() as capture_path: # pylint: disable=no-member
 
             config = {
                 'enable': 'true',
@@ -128,17 +129,18 @@ class TestCapture( unittest.TestCase ):
                 'fps': '5.0',
                 'fourcc': 'mp4v',
                 'container': 'mp4',
-                'multiproc': 'false'
+                'multiproc': 'false',
+                'camera': 'test',
             }
 
-            capturer = VideoCapture( **config )
+            capturer = VideoCapture( 'test_capture', **config )
 
             for i in range( 5 ):
                 frame = None
                 self.assertEqual( capturer.frames_count, 0 )
                 fc_check = 0
                 for j in range( 0, 200 ):
-                    frame = self.fake.random_image( 640, 480 )
+                    frame = self.fake.random_image( 640, 480 ) # pylint: disable=no-member
                     capturer.handle_motion_frame( frame )
                     fc_check += 1
                     if fc_check > 100:
