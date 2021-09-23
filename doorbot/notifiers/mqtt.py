@@ -36,9 +36,15 @@ class MQTTNotifier( Notifier ):
         self.mqtt.loop_start()
         if 'logger' in kwargs and kwargs['logger'] == 'true':
             self.mqtt.enable_logger()
+        ssl_proto = None
+        if 'ssl_proto' in kwargs:
+            ssl_proto = getattr( ssl, kwargs['ssl_proto'] )
         if 'mqtts' == parsed_url.scheme:
-            self.mqtt.tls_set(
-                kwargs['ca'], tls_version=ssl.PROTOCOL_TLSv1_2 )
+            if ssl_proto:
+                self.mqtt.tls_set(
+                    kwargs['ca'], tls_version=ssl.PROTOCOL_TLSv1_2 )
+            else:
+                self.mqtt.tls_set( kwargs['ca'] )
         elif 'mqtt' != parsed_url.scheme:
             raise ValueError( 'invalid MQTT scheme specified in url' ) 
         self.mqtt.on_connect = self.on_connected
