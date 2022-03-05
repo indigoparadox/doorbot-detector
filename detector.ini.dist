@@ -13,6 +13,7 @@ instances=1
 
 [instance.doorbot.detectors.motion.1]
 enable=true
+camera=1
 threshold=50
 varthreshold=200
 blur=5
@@ -25,6 +26,7 @@ instances=1
 
 [instance.doorbot.capturers.video.1]
 enable=true
+camera=1
 path=/srv/snapshots
 fps=5.0
 fourcc=mp4v
@@ -36,6 +38,7 @@ instances=1
 
 [instance.doorbot.capturers.photo.1]
 enable=false
+camera=1
 path=/srv/snapshots
 
 [doorbot.observers.framebuffer]
@@ -43,6 +46,7 @@ instances=1
 
 [instance.doorbot.observers.framebuffer.1]
 enable=false
+camera=1
 path=/dev/fb0
 fps=5.0
 reportframes=100
@@ -57,6 +61,7 @@ instances=1
 
 [instance.doorbot.observers.reserver.1]
 enable=true
+camera=1
 listen=127.0.0.1
 port=8888
 fps=5.0
@@ -84,6 +89,7 @@ instances=1
 
 [instance.doorbot.notifiers.mqtt.1]
 enable=false
+camera=1
 url=mqtt://mqtt.example.com:1883/topic
 logger=false
 snapshots=true
@@ -103,5 +109,6 @@ instances=1
 
 [instance.doorbot.notifiers.logger.1]
 enable=false
+camera=1
 logfile=./testlog.log
 sysloghost=syslog://localhost
