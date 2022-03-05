@@ -251,7 +251,7 @@ def main():
         logging.getLogger( '' ).addHandler( smtp_handler )
         logger.info( 'exception reporter initialized' )
 
-    except (NoOptionError, NoSectionError) as exc:
+    except (NoOptionError, NoSectionError, KeyError) as exc:
         logger.info( 'could not setup exception reporter: %s', exc )
 
     #app.start()
