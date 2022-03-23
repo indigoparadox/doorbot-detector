@@ -73,6 +73,7 @@ class Doorbot( object ):
         self.cameras = {}
         for camera_key in config['cameras']:
             camera_cfg = config['cameras'][camera_key]
+            self.logger.debug( 'setting up camera with plugin: %s', camera_cfg['module'] )
             camera = camera_cfg['module'].PLUGIN_CLASS( camera_key, **camera_cfg )
             self.cameras[camera_key] = camera
 

@@ -1,8 +1,8 @@
 
-[doorbot.cameras.rtsp]
+[doorbot.cameras.opencv]
 instances=1
 
-[instance.doorbot.cameras.rtsp.1]
+[instance.doorbot.cameras.opencv.1]
 enable=true
 url=rtsp://user:password@camera.example.com/stream
 fps=5.0
