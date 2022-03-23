@@ -265,10 +265,11 @@ def main():
     except KeyboardInterrupt:
         logger.info( 'quitting on ctrl-c' )
         if app:
-            app.camera.stop()
+            for camera_key in app.cameras:
+                app.cameras[camera_key].stop()
             app.overlay_thread.stop()
-            for proc in app.observer_procs:
-                proc.stop()
+            for observer_key in app.observer_procs:
+                app.observer_procs[observer_key].stop()
         sys.exit( 0 )
 
     except Exception as exc: # pylint: disable=broad-except
