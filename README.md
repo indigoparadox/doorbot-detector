@@ -1,5 +1,12 @@
 
 # doorbot
+
+## Deprecation
+
+Doorbot was started to fill a niche that has largely been filled by the more capable [Frigate](https://github.com/blakeblackshear/frigate). For that reason, please do not expect updates for the forseeable future!
+
+## Introduction
+
 ![tests](https://github.com/indigoparadox/doorbot-detector/actions/workflows/tests.yaml/badge.svg)
 
 * [Doorbot](#doorbot)
